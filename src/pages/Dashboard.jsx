@@ -1,36 +1,105 @@
+import { useState, useEffect } from 'react'
 import { Package, Users, Layers, AlertTriangle } from 'lucide-react'
+import { dashboardAPI } from '../services/api'
 
 const Dashboard = () => {
-  const stats = [
+  const [stats, setStats] = useState([
     {
       title: 'Total Raw Materials',
-      value: '1,234',
-      change: '+12%',
+      value: '0',
+      change: '+0%',
       icon: Package,
       color: 'bg-blue-500',
     },
     {
       title: 'Active Suppliers',
-      value: '89',
-      change: '+5%',
+      value: '0',
+      change: '+0%',
       icon: Users,
       color: 'bg-green-500',
     },
     {
       title: 'Active Batches',
-      value: '456',
-      change: '+8%',
+      value: '0',
+      change: '+0%',
       icon: Layers,
       color: 'bg-purple-500',
     },
     {
       title: 'Pending Alerts',
-      value: '23',
-      change: '-3%',
+      value: '0',
+      change: '-0%',
       icon: AlertTriangle,
       color: 'bg-red-500',
     },
-  ]
+  ])
+  const [recentBatches, setRecentBatches] = useState([])
+  const [supplierAlerts, setSupplierAlerts] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      // Try to fetch admin stats, but handle errors gracefully for non-admin users
+      const [statsData, batchesData, alertsData] = await Promise.allSettled([
+        dashboardAPI.getStats(),
+        dashboardAPI.getRecentBatches(),
+        dashboardAPI.getSupplierAlerts(),
+      ])
+
+      // Handle stats data (admin only)
+      if (statsData.status === 'fulfilled') {
+        setStats([
+          {
+            title: 'Total Raw Materials',
+            value: statsData.value.totalRawMaterials.value.toString(),
+            change: statsData.value.totalRawMaterials.change,
+            icon: Package,
+            color: 'bg-blue-500',
+          },
+          {
+            title: 'Active Suppliers',
+            value: statsData.value.activeSuppliers.value.toString(),
+            change: statsData.value.activeSuppliers.change,
+            icon: Users,
+            color: 'bg-green-500',
+          },
+          {
+            title: 'Active Batches',
+            value: statsData.value.activeBatches.value.toString(),
+            change: statsData.value.activeBatches.change,
+            icon: Layers,
+            color: 'bg-purple-500',
+          },
+          {
+            title: 'Pending Alerts',
+            value: statsData.value.pendingAlerts.value.toString(),
+            change: statsData.value.pendingAlerts.change,
+            icon: AlertTriangle,
+            color: 'bg-red-500',
+          },
+        ])
+      }
+
+      // Handle batches data
+      if (batchesData.status === 'fulfilled') {
+        setRecentBatches(batchesData.value)
+      }
+
+      // Handle alerts data (admin only)
+      if (alertsData.status === 'fulfilled') {
+        setSupplierAlerts(alertsData.value)
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -70,34 +139,50 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Batches</h2>
-          <div className="space-y-4">
-            {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                <div>
-                  <p className="font-medium text-gray-900">Batch #{1000 + item}</p>
-                  <p className="text-sm text-gray-500">Created 2 hours ago</p>
+          {loading ? (
+            <div className="text-center py-8 text-gray-500">Loading...</div>
+          ) : recentBatches.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No recent batches</div>
+          ) : (
+            <div className="space-y-4">
+              {recentBatches.map((batch) => (
+                <div key={batch._id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                  <div>
+                    <p className="font-medium text-gray-900">{batch.batchNumber}</p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(batch.createdAt).toLocaleDateString()} - {batch.rawMaterial?.name || 'N/A'}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                    {batch.status}
+                  </span>
                 </div>
-                <span className="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                  Active
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Supplier Alerts</h2>
-          <div className="space-y-4">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="flex items-start space-x-3 py-3 border-b border-gray-100 last:border-0">
-                <div className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full mt-2"></div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">Certification Expiring Soon</p>
-                  <p className="text-sm text-gray-500">Supplier ABC Chemicals - ISO 9001 expires in 15 days</p>
+          {loading ? (
+            <div className="text-center py-8 text-gray-500">Loading...</div>
+          ) : supplierAlerts.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No alerts</div>
+          ) : (
+            <div className="space-y-4">
+              {supplierAlerts.map((alert, index) => (
+                <div key={index} className="flex items-start space-x-3 py-3 border-b border-gray-100 last:border-0">
+                  <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
+                    alert.severity === 'high' ? 'bg-red-500' : 'bg-yellow-500'
+                  }`}></div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{alert.type}</p>
+                    <p className="text-sm text-gray-500">{alert.message}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,41 +1,35 @@
+import { useState, useEffect } from 'react'
 import { Plus, Search, Filter } from 'lucide-react'
+import { batchesAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const Batches = () => {
-  const batches = [
-    {
-      id: 1,
-      batchNumber: 'BATCH-2024-001',
-      rawMaterial: 'Sodium Hydroxide',
-      source: 'ABC Chemicals Inc.',
-      productionDate: '2024-01-15',
-      acquisitionDate: '2024-01-20',
-      buyer: 'John Doe',
-      contents: '99.5% Pure NaOH',
-      status: 'Active',
-    },
-    {
-      id: 2,
-      batchNumber: 'BATCH-2024-002',
-      rawMaterial: 'Hydrochloric Acid',
-      source: 'XYZ Materials Ltd.',
-      productionDate: '2024-01-10',
-      acquisitionDate: '2024-01-18',
-      buyer: 'Jane Smith',
-      contents: '37% HCl Solution',
-      status: 'Active',
-    },
-    {
-      id: 3,
-      batchNumber: 'BATCH-2024-003',
-      rawMaterial: 'Ethanol',
-      source: 'Global Supply Co.',
-      productionDate: '2024-01-12',
-      acquisitionDate: '2024-01-22',
-      buyer: 'Mike Johnson',
-      contents: '99.9% Pure Ethanol',
-      status: 'Completed',
-    },
-  ]
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  const [batches, setBatches] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  useEffect(() => {
+    fetchBatches()
+  }, [searchTerm, statusFilter])
+
+  const fetchBatches = async () => {
+    try {
+      setLoading(true)
+      const params = {}
+      if (searchTerm) params.search = searchTerm
+      if (statusFilter) params.status = statusFilter
+      
+      const data = await batchesAPI.getAll(params)
+      setBatches(data)
+    } catch (error) {
+      console.error('Error fetching batches:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -59,6 +53,8 @@ const Batches = () => {
             <input
               type="text"
               placeholder="Search batches..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -102,48 +98,74 @@ const Batches = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {batches.map((batch) => (
-                <tr key={batch.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{batch.batchNumber}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{batch.rawMaterial}</div>
-                    <div className="text-xs text-gray-500">{batch.contents}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{batch.source}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-600">{batch.productionDate}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-600">{batch.acquisitionDate}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{batch.buyer}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        batch.status === 'Active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {batch.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-primary-600 hover:text-primary-900 mr-4">
-                      View
-                    </button>
-                    <button className="text-gray-600 hover:text-gray-900">
-                      Edit
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                    Loading...
                   </td>
                 </tr>
-              ))}
+              ) : batches.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                    No batches found
+                  </td>
+                </tr>
+              ) : (
+                batches.map((batch) => (
+                  <tr key={batch._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{batch.batchNumber}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {typeof batch.rawMaterial === 'object' ? batch.rawMaterial.name : batch.rawMaterial}
+                      </div>
+                      <div className="text-xs text-gray-500">{batch.contents}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {typeof batch.source === 'object' ? batch.source.name : batch.source}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">
+                        {new Date(batch.productionDate).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">
+                        {new Date(batch.acquisitionDate).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{batch.buyer}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          batch.status === 'Active'
+                            ? 'bg-green-100 text-green-800'
+                            : batch.status === 'Completed'
+                            ? 'bg-gray-100 text-gray-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {batch.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button className="text-primary-600 hover:text-primary-900 mr-4">
+                        View
+                      </button>
+                      {isAdmin && (
+                        <button className="text-gray-600 hover:text-gray-900">
+                          Edit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

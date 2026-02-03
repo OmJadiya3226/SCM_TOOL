@@ -1,32 +1,35 @@
+import { useState, useEffect } from 'react'
 import { Plus, Search, Filter } from 'lucide-react'
+import { suppliersAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const Suppliers = () => {
-  const suppliers = [
-    {
-      id: 1,
-      name: 'ABC Chemicals Inc.',
-      status: 'Approved',
-      certifications: ['ISO 9001', 'GMP'],
-      qualityIssues: 0,
-      lastAudit: '2024-01-15',
-    },
-    {
-      id: 2,
-      name: 'XYZ Materials Ltd.',
-      status: 'Approved',
-      certifications: ['ISO 14001'],
-      qualityIssues: 2,
-      lastAudit: '2024-01-10',
-    },
-    {
-      id: 3,
-      name: 'Global Supply Co.',
-      status: 'Pending',
-      certifications: [],
-      qualityIssues: 0,
-      lastAudit: 'N/A',
-    },
-  ]
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  const [suppliers, setSuppliers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  useEffect(() => {
+    fetchSuppliers()
+  }, [searchTerm, statusFilter])
+
+  const fetchSuppliers = async () => {
+    try {
+      setLoading(true)
+      const params = {}
+      if (searchTerm) params.search = searchTerm
+      if (statusFilter) params.status = statusFilter
+      
+      const data = await suppliersAPI.getAll(params)
+      setSuppliers(data)
+    } catch (error) {
+      console.error('Error fetching suppliers:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -50,6 +53,8 @@ const Suppliers = () => {
             <input
               type="text"
               placeholder="Search suppliers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -87,58 +92,80 @@ const Suppliers = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {suppliers.map((supplier) => (
-                <tr key={supplier.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        supplier.status === 'Approved'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {supplier.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-2">
-                      {supplier.certifications.map((cert, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
-                        >
-                          {cert}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`text-sm ${
-                        supplier.qualityIssues === 0
-                          ? 'text-green-600'
-                          : 'text-red-600 font-medium'
-                      }`}
-                    >
-                      {supplier.qualityIssues}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {supplier.lastAudit}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-primary-600 hover:text-primary-900 mr-4">
-                      View
-                    </button>
-                    <button className="text-gray-600 hover:text-gray-900">
-                      Edit
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                    Loading...
                   </td>
                 </tr>
-              ))}
+              ) : suppliers.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                    No suppliers found
+                  </td>
+                </tr>
+              ) : (
+                suppliers.map((supplier) => (
+                  <tr key={supplier._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          supplier.status === 'Approved'
+                            ? 'bg-green-100 text-green-800'
+                            : supplier.status === 'Pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {supplier.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        {supplier.certifications && supplier.certifications.length > 0 ? (
+                          supplier.certifications.map((cert, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
+                            >
+                              {cert}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-400">No certifications</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`text-sm ${
+                          supplier.qualityIssues === 0
+                            ? 'text-green-600'
+                            : 'text-red-600 font-medium'
+                        }`}
+                      >
+                        {supplier.qualityIssues || 0}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {supplier.lastAudit ? new Date(supplier.lastAudit).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button className="text-primary-600 hover:text-primary-900 mr-4">
+                        View
+                      </button>
+                      {isAdmin && (
+                        <button className="text-gray-600 hover:text-gray-900">
+                          Edit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

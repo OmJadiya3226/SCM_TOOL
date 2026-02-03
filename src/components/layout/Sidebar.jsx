@@ -5,15 +5,21 @@ import {
   Package, 
   Layers,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  BarChart3
 } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+
   const menuItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/suppliers', icon: Users, label: 'Suppliers' },
     { path: '/raw-materials', icon: Package, label: 'Raw Materials' },
     { path: '/batches', icon: Layers, label: 'Batches' },
+    ...(isAdmin ? [{ path: '/admin-stats', icon: BarChart3, label: 'Admin Stats' }] : []),
   ]
 
   return (

@@ -1,38 +1,35 @@
+import { useState, useEffect } from 'react'
 import { Plus, Search, Filter } from 'lucide-react'
+import { rawMaterialsAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const RawMaterials = () => {
-  const materials = [
-    {
-      id: 1,
-      name: 'Sodium Hydroxide',
-      purity: '99.5%',
-      supplier: 'ABC Chemicals Inc.',
-      hazardClass: 'Corrosive',
-      storageTemp: '15-25°C',
-      status: 'In Stock',
-      quantity: '500 kg',
-    },
-    {
-      id: 2,
-      name: 'Hydrochloric Acid',
-      purity: '37%',
-      supplier: 'XYZ Materials Ltd.',
-      hazardClass: 'Corrosive',
-      storageTemp: '20-30°C',
-      status: 'Low Stock',
-      quantity: '50 L',
-    },
-    {
-      id: 3,
-      name: 'Ethanol',
-      purity: '99.9%',
-      supplier: 'Global Supply Co.',
-      hazardClass: 'Flammable',
-      storageTemp: 'Below 25°C',
-      status: 'In Stock',
-      quantity: '200 L',
-    },
-  ]
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  const [materials, setMaterials] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  useEffect(() => {
+    fetchMaterials()
+  }, [searchTerm, statusFilter])
+
+  const fetchMaterials = async () => {
+    try {
+      setLoading(true)
+      const params = {}
+      if (searchTerm) params.search = searchTerm
+      if (statusFilter) params.status = statusFilter
+      
+      const data = await rawMaterialsAPI.getAll(params)
+      setMaterials(data)
+    } catch (error) {
+      console.error('Error fetching raw materials:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -56,6 +53,8 @@ const RawMaterials = () => {
             <input
               type="text"
               placeholder="Search raw materials..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -96,47 +95,69 @@ const RawMaterials = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {materials.map((material) => (
-                <tr key={material.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{material.name}</div>
-                    <div className="text-sm text-gray-500">{material.quantity}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900 font-medium">{material.purity}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{material.supplier}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">
-                      {material.hazardClass}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-600">{material.storageTemp}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        material.status === 'In Stock'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {material.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-primary-600 hover:text-primary-900 mr-4">
-                      View
-                    </button>
-                    <button className="text-gray-600 hover:text-gray-900">
-                      Edit
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                    Loading...
                   </td>
                 </tr>
-              ))}
+              ) : materials.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                    No raw materials found
+                  </td>
+                </tr>
+              ) : (
+                materials.map((material) => (
+                  <tr key={material._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{material.name}</div>
+                      <div className="text-sm text-gray-500">
+                        {material.quantity?.value} {material.quantity?.unit}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900 font-medium">{material.purity}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {typeof material.supplier === 'object' ? material.supplier.name : material.supplier}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">
+                        {material.hazardClass}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">{material.storageTemp}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          material.status === 'In Stock'
+                            ? 'bg-green-100 text-green-800'
+                            : material.status === 'Low Stock'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {material.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button className="text-primary-600 hover:text-primary-900 mr-4">
+                        View
+                      </button>
+                      {isAdmin && (
+                        <button className="text-gray-600 hover:text-gray-900">
+                          Edit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
