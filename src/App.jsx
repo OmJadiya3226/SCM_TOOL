@@ -5,7 +5,6 @@ import Dashboard from './pages/Dashboard'
 import Suppliers from './pages/Suppliers'
 import RawMaterials from './pages/RawMaterials'
 import Batches from './pages/Batches'
-import AdminStats from './pages/AdminStats'
 import Login from './pages/Login'
 import Register from './pages/Register'
 
@@ -40,7 +39,6 @@ function App() {
                   <Route path="/suppliers" element={<Suppliers />} />
                   <Route path="/raw-materials" element={<RawMaterials />} />
                   <Route path="/batches" element={<Batches />} />
-                  <Route path="/admin-stats" element={<AdminStats />} />
                 </Routes>
               </DashboardLayout>
             </ProtectedRoute>

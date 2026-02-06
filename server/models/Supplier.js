@@ -12,14 +12,26 @@ const supplierSchema = new mongoose.Schema({
     default: 'Pending',
   },
   certifications: [{
-    type: String,
-    trim: true,
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    expiryDate: {
+      type: Date,
+    },
   }],
-  qualityIssues: {
-    type: Number,
-    default: 0,
-    min: 0,
-  },
+  qualityIssues: [{
+    description: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    date: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   lastAudit: {
     type: Date,
   },

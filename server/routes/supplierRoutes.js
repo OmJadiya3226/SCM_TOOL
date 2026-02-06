@@ -1,5 +1,7 @@
 import express from 'express';
 import Supplier from '../models/Supplier.js';
+import RawMaterial from '../models/RawMaterial.js';
+import Batch from '../models/Batch.js';
 import { protect, admin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -82,12 +84,32 @@ router.put('/:id', protect, admin, async (req, res) => {
 // @access  Private
 router.delete('/:id', protect, async (req, res) => {
   try {
-    const supplier = await Supplier.findByIdAndDelete(req.params.id);
+    const supplier = await Supplier.findById(req.params.id);
 
     if (!supplier) {
       return res.status(404).json({ message: 'Supplier not found' });
     }
 
+    // Check if supplier is referenced in raw materials
+    const rawMaterialsUsingSupplier = await RawMaterial.countDocuments({ supplier: req.params.id });
+    
+    // Check if supplier is referenced in batches
+    const batchesUsingSupplier = await Batch.countDocuments({ source: req.params.id });
+
+    if (rawMaterialsUsingSupplier > 0 || batchesUsingSupplier > 0) {
+      const errors = [];
+      if (rawMaterialsUsingSupplier > 0) {
+        errors.push(`${rawMaterialsUsingSupplier} raw material(s)`);
+      }
+      if (batchesUsingSupplier > 0) {
+        errors.push(`${batchesUsingSupplier} batch(es)`);
+      }
+      return res.status(400).json({ 
+        message: `Cannot delete supplier. It is currently used in ${errors.join(' and ')}. Please remove or update these references first.` 
+      });
+    }
+
+    await Supplier.findByIdAndDelete(req.params.id);
     res.json({ message: 'Supplier deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });

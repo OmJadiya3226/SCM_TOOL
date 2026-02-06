@@ -1,34 +1,34 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Package, Users, Layers, AlertTriangle } from 'lucide-react'
 import { dashboardAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const Dashboard = () => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [stats, setStats] = useState([
     {
       title: 'Total Raw Materials',
       value: '0',
-      change: '+0%',
       icon: Package,
       color: 'bg-blue-500',
     },
     {
       title: 'Active Suppliers',
       value: '0',
-      change: '+0%',
       icon: Users,
       color: 'bg-green-500',
     },
     {
       title: 'Active Batches',
       value: '0',
-      change: '+0%',
       icon: Layers,
       color: 'bg-purple-500',
     },
     {
-      title: 'Pending Alerts',
+      title: 'Supplier Alerts',
       value: '0',
-      change: '-0%',
       icon: AlertTriangle,
       color: 'bg-red-500',
     },
@@ -38,8 +38,16 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchDashboardData()
-  }, [])
+    // Redirect if not admin
+    if (user && user.role !== 'admin') {
+      navigate('/suppliers')
+      return
+    }
+
+    if (user?.role === 'admin') {
+      fetchDashboardData()
+    }
+  }, [user, navigate])
 
   const fetchDashboardData = async () => {
     try {
@@ -57,28 +65,24 @@ const Dashboard = () => {
           {
             title: 'Total Raw Materials',
             value: statsData.value.totalRawMaterials.value.toString(),
-            change: statsData.value.totalRawMaterials.change,
             icon: Package,
             color: 'bg-blue-500',
           },
           {
             title: 'Active Suppliers',
             value: statsData.value.activeSuppliers.value.toString(),
-            change: statsData.value.activeSuppliers.change,
             icon: Users,
             color: 'bg-green-500',
           },
           {
             title: 'Active Batches',
             value: statsData.value.activeBatches.value.toString(),
-            change: statsData.value.activeBatches.change,
             icon: Layers,
             color: 'bg-purple-500',
           },
           {
-            title: 'Pending Alerts',
+            title: 'Supplier Alerts',
             value: statsData.value.pendingAlerts.value.toString(),
-            change: statsData.value.pendingAlerts.change,
             icon: AlertTriangle,
             color: 'bg-red-500',
           },
@@ -99,6 +103,11 @@ const Dashboard = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Don't render if not admin
+  if (!user || user.role !== 'admin') {
+    return null
   }
 
   return (
@@ -122,9 +131,6 @@ const Dashboard = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-600">{stat.title}</p>
                   <p className="mt-2 text-3xl font-bold text-gray-900">{stat.value}</p>
-                  <p className={`mt-2 text-sm ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                    {stat.change} from last month
-                  </p>
                 </div>
                 <div className={`${stat.color} p-3 rounded-lg`}>
                   <Icon className="w-6 h-6 text-white" />
@@ -172,9 +178,8 @@ const Dashboard = () => {
             <div className="space-y-4">
               {supplierAlerts.map((alert, index) => (
                 <div key={index} className="flex items-start space-x-3 py-3 border-b border-gray-100 last:border-0">
-                  <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
-                    alert.severity === 'high' ? 'bg-red-500' : 'bg-yellow-500'
-                  }`}></div>
+                  <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${alert.severity === 'high' ? 'bg-red-500' : 'bg-yellow-500'
+                    }`}></div>
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">{alert.type}</p>
                     <p className="text-sm text-gray-500">{alert.message}</p>

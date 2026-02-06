@@ -11,35 +11,75 @@ const router = express.Router();
 // @access  Private/Admin
 router.get('/stats', protect, admin, async (req, res) => {
   try {
+    const totalRawMaterials = await RawMaterial.countDocuments();
+    const activeSuppliers = await Supplier.countDocuments({ status: 'Approved' }); // Changed locally to match logical 'active' state if needed, or keep 'Pending' if that was intended. User requested "Active Suppliers" count in stats but code was counting 'Pending'. Let's stick to what it was or check? The UI says "Active Suppliers". I should probably fix this to count Approved ones or all? The original code counted 'Pending'. I'll stick to 'Pending' if that's what 'activeSuppliers' variable meant, BUT the variable name is activeSuppliers. Let's look at the original code: `Supplier.countDocuments({ status: 'Pending' })`. That seems wrong for "Active". I will count 'Approved'. Wait, let me check the file content again.
+    // The original code was: `activeSuppliers: Supplier.countDocuments({ status: 'Pending' })`. 
+    // The UI says "Active Suppliers". 
+    // I will calculating "Supplier Alerts" count instead of just "Pending" count for the alerts box.
+    // For "Active Suppliers", I will count actual active suppliers. 
+    // But my main task is the ALERTS.
+    
+    // Let's first calculate the ALERTS count.
+    
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const suppliers = await Supplier.find({});
+    
+    let totalQualityIssues = 0;
+    let expiringCertsCount = 0;
+    let pendingSuppliersCount = 0;
+    let approvedSuppliersCount = 0;
+
+    suppliers.forEach(supplier => {
+        // Count Quality Issues
+        if (Array.isArray(supplier.qualityIssues)) {
+            totalQualityIssues += supplier.qualityIssues.length;
+        } else if (typeof supplier.qualityIssues === 'number') {
+             // Fallback for old data if any
+            totalQualityIssues += supplier.qualityIssues;
+        }
+
+        // Count Expiring Certs
+        if (supplier.certifications && supplier.certifications.length > 0) {
+            supplier.certifications.forEach(cert => {
+                const expiryDate = typeof cert === 'object' && cert.expiryDate ? new Date(cert.expiryDate) : null;
+                if (expiryDate && expiryDate >= today && expiryDate <= thirtyDaysFromNow) {
+                    expiringCertsCount++;
+                }
+            });
+        }
+        
+        if (supplier.status === 'Pending') pendingSuppliersCount++;
+        if (supplier.status === 'Approved') approvedSuppliersCount++;
+    });
+
+    const totalSupplierAlerts = totalQualityIssues + expiringCertsCount;
+
     const [
-      totalRawMaterials,
-      activeSuppliers,
-      activeBatches,
-      lowStockMaterials,
+        activeBatches,
+        lowStockMaterials,
     ] = await Promise.all([
-      RawMaterial.countDocuments(),
-      Supplier.countDocuments({ status: 'Approved' }),
       Batch.countDocuments({ status: 'Active' }),
       RawMaterial.countDocuments({ status: 'Low Stock' }),
     ]);
 
-    // Calculate percentage changes (mock data for now, can be enhanced with historical data)
     const stats = {
       totalRawMaterials: {
-        value: totalRawMaterials,
-        change: '+12%', // This can be calculated from historical data
+        value: await RawMaterial.countDocuments(),
       },
       activeSuppliers: {
-        value: activeSuppliers,
-        change: '+5%',
+        value: approvedSuppliersCount, // Fixing this logic to be meaningful
       },
       activeBatches: {
         value: activeBatches,
-        change: '+8%',
       },
-      pendingAlerts: {
-        value: lowStockMaterials,
-        change: '-3%',
+      pendingAlerts: { // This key is used by frontend "Pending Alerts" card, we will rename the label in frontend but keep key or change valid? 
+        // The frontend uses stats.pendingAlerts.value. 
+        // I will send the new TOTAL ALERT COUNT here.
+        value: totalSupplierAlerts,
       },
     };
 
@@ -71,27 +111,72 @@ router.get('/recent-batches', protect, admin, async (req, res) => {
 // @access  Private/Admin
 router.get('/supplier-alerts', protect, admin, async (req, res) => {
   try {
-    // Get suppliers with quality issues or pending status
-    const suppliers = await Supplier.find({
-      $or: [
-        { qualityIssues: { $gt: 0 } },
-        { status: 'Pending' },
-      ],
-    })
-      .sort({ qualityIssues: -1, createdAt: -1 })
-      .limit(5);
+    // Calculate date 30 days from now for expiring certifications
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Format alerts
-    const alerts = suppliers.map((supplier) => ({
-      type: supplier.qualityIssues > 0 ? 'Quality Issues' : 'Certification Expiring Soon',
-      message: supplier.qualityIssues > 0
-        ? `${supplier.name} - ${supplier.qualityIssues} quality issue(s)`
-        : `${supplier.name} - Certification expiring soon`,
-      supplier: supplier.name,
-      severity: supplier.qualityIssues > 0 ? 'high' : 'medium',
-    }));
+    // Get all suppliers
+    const suppliers = await Supplier.find({}).sort({ createdAt: -1 });
 
-    res.json(alerts);
+    const alerts = [];
+
+    suppliers.forEach((supplier) => {
+      // Check Quality Issues
+      if (Array.isArray(supplier.qualityIssues) && supplier.qualityIssues.length > 0) {
+        supplier.qualityIssues.forEach(issue => {
+             alerts.push({
+                type: 'Quality Issue',
+                message: `${supplier.name} - ${issue.description} (${new Date(issue.date).toLocaleDateString()})`,
+                supplier: supplier.name,
+                severity: 'high',
+                date: new Date(issue.date)
+             });
+        });
+      } else if (typeof supplier.qualityIssues === 'number' && supplier.qualityIssues > 0) {
+         // Legacy support
+         alerts.push({
+            type: 'Quality Issues',
+            message: `${supplier.name} - ${supplier.qualityIssues} quality issue(s)`,
+            supplier: supplier.name,
+            severity: 'high',
+            date: new Date()
+         });
+      }
+
+      // Check Expiring Certifications
+      if (supplier.certifications && supplier.certifications.length > 0) {
+        supplier.certifications.forEach((cert) => {
+          const expiryDate = typeof cert === 'object' && cert.expiryDate ? new Date(cert.expiryDate) : null;
+          const certName = typeof cert === 'string' ? cert : cert.name;
+
+          if (expiryDate && expiryDate >= today && expiryDate <= thirtyDaysFromNow) {
+            const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+            alerts.push({
+              type: 'Certification Expiring',
+              message: `${supplier.name} - ${certName} expires in ${daysUntilExpiry} day(s)`,
+              supplier: supplier.name,
+              severity: daysUntilExpiry <= 7 ? 'high' : 'medium',
+              date: expiryDate // Use expiry date for sorting? Or maybe we want most urgent first.
+            });
+          }
+        });
+      }
+    });
+
+    // Sort by severity (high first) then by relevant date
+    const sortedAlerts = alerts
+      .sort((a, b) => {
+        if (a.severity === 'high' && b.severity !== 'high') return -1;
+        if (a.severity !== 'high' && b.severity === 'high') return 1;
+        return 0; // Could add secondary sort by date
+      });
+      // Removed .slice(0, 5) to show all alerts as implied by "list all issues" request, or should I keep a limit? 
+      // User said "list all issues that each supplier has". I will remove the limit or increase it significantly. 
+      // I'll keep it unbounded for now as requested "list all".
+
+    res.json(sortedAlerts);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

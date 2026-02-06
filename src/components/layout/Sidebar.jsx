@@ -1,12 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { 
-  LayoutDashboard, 
-  Users, 
-  Package, 
+import {
+  LayoutDashboard,
+  Users,
+  Package,
   Layers,
   ChevronLeft,
-  ChevronRight,
-  BarChart3
+  ChevronRight
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
@@ -15,18 +14,17 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   const isAdmin = user?.role === 'admin'
 
   const menuItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    ...(isAdmin ? [{ path: '/', icon: LayoutDashboard, label: 'Dashboard' }] : []),
     { path: '/suppliers', icon: Users, label: 'Suppliers' },
     { path: '/raw-materials', icon: Package, label: 'Raw Materials' },
     { path: '/batches', icon: Layers, label: 'Batches' },
-    ...(isAdmin ? [{ path: '/admin-stats', icon: BarChart3, label: 'Admin Stats' }] : []),
   ]
 
   return (
     <>
       {/* Mobile Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
         />
@@ -34,14 +32,13 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-white border-r border-gray-200 z-50 transition-all duration-300 ${
-          isOpen ? 'w-64' : 'w-20'
-        }`}
+        className={`fixed top-0 left-0 h-full bg-white border-r border-gray-200 z-50 transition-all duration-300 ${isOpen ? 'w-64' : 'w-20'
+          }`}
       >
         {/* Logo Section */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           {isOpen && (
-            <h1 className="text-xl font-bold text-primary-600">SCM Tool</h1>
+            <h1 className="text-xl font-bold text-primary-600">SCM System</h1>
           )}
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -65,8 +62,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `sidebar-link ${isActive ? 'active' : ''} ${
-                    !isOpen ? 'justify-center' : ''
+                  `sidebar-link ${isActive ? 'active' : ''} ${!isOpen ? 'justify-center' : ''
                   }`
                 }
                 title={!isOpen ? item.label : ''}
@@ -82,7 +78,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         {isOpen && (
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
             <p className="text-xs text-gray-500 text-center">
-              SCM Tool v1.0.0
+              SCM System v1.0.0
             </p>
           </div>
         )}
