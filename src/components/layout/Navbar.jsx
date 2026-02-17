@@ -46,6 +46,16 @@ const Navbar = ({ onMenuClick }) => {
                 {showDropdown && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                     <button
+                      onClick={() => {
+                        setShowDropdown(false)
+                        navigate('/account')
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Manage Account
+                    </button>
+                    <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >

@@ -35,8 +35,8 @@ router.post('/register', async (req, res) => {
 
     // Verify secret password
     if (secretPassword !== requiredSecret) {
-      return res.status(403).json({ 
-        message: `Invalid ${userRole} secret password` 
+      return res.status(403).json({
+        message: `Invalid ${userRole} secret password`
       });
     }
 
@@ -108,6 +108,54 @@ router.get('/me', protect, async (req, res) => {
       email: user.email,
       role: user.role,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/auth/change-password
+// @desc    Change user password
+// @access  Private
+router.post('/change-password', protect, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate required fields
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Please provide current and new password' });
+    }
+
+    // Validate new password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    }
+
+    // Get user with password
+    const user = await User.findById(req.user._id).select('+password');
+
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   DELETE /api/auth/me
+// @desc    Delete current user account
+// @access  Private
+router.delete('/me', protect, async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.user._id);
+    res.json({ message: 'Account deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

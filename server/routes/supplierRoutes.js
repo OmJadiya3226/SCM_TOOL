@@ -11,7 +11,7 @@ const router = express.Router();
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { search, status } = req.query;
+    const { search, status, qualityIssuesCount } = req.query;
     let query = {};
 
     if (search) {
@@ -20,6 +20,10 @@ router.get('/', protect, async (req, res) => {
 
     if (status) {
       query.status = status;
+    }
+
+    if (qualityIssuesCount) {
+      query.$expr = { $eq: [{ $size: "$qualityIssues" }, parseInt(qualityIssuesCount)] };
     }
 
     const suppliers = await Supplier.find(query).sort({ createdAt: -1 });
@@ -35,7 +39,7 @@ router.get('/', protect, async (req, res) => {
 router.get('/:id', protect, async (req, res) => {
   try {
     const supplier = await Supplier.findById(req.params.id);
-    
+
     if (!supplier) {
       return res.status(404).json({ message: 'Supplier not found' });
     }
@@ -92,7 +96,7 @@ router.delete('/:id', protect, async (req, res) => {
 
     // Check if supplier is referenced in raw materials
     const rawMaterialsUsingSupplier = await RawMaterial.countDocuments({ supplier: req.params.id });
-    
+
     // Check if supplier is referenced in batches
     const batchesUsingSupplier = await Batch.countDocuments({ source: req.params.id });
 
@@ -104,8 +108,8 @@ router.delete('/:id', protect, async (req, res) => {
       if (batchesUsingSupplier > 0) {
         errors.push(`${batchesUsingSupplier} batch(es)`);
       }
-      return res.status(400).json({ 
-        message: `Cannot delete supplier. It is currently used in ${errors.join(' and ')}. Please remove or update these references first.` 
+      return res.status(400).json({
+        message: `Cannot delete supplier. It is currently used in ${errors.join(' and ')}. Please remove or update these references first.`
       });
     }
 

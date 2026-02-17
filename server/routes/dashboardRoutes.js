@@ -18,68 +18,68 @@ router.get('/stats', protect, admin, async (req, res) => {
     // I will calculating "Supplier Alerts" count instead of just "Pending" count for the alerts box.
     // For "Active Suppliers", I will count actual active suppliers. 
     // But my main task is the ALERTS.
-    
+
     // Let's first calculate the ALERTS count.
-    
+
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const suppliers = await Supplier.find({});
-    
+
     let totalQualityIssues = 0;
     let expiringCertsCount = 0;
     let pendingSuppliersCount = 0;
     let approvedSuppliersCount = 0;
 
     suppliers.forEach(supplier => {
-        // Count Quality Issues
-        if (Array.isArray(supplier.qualityIssues)) {
-            totalQualityIssues += supplier.qualityIssues.length;
-        } else if (typeof supplier.qualityIssues === 'number') {
-             // Fallback for old data if any
-            totalQualityIssues += supplier.qualityIssues;
-        }
+      // Count Quality Issues
+      if (Array.isArray(supplier.qualityIssues)) {
+        totalQualityIssues += supplier.qualityIssues.length;
+      } else if (typeof supplier.qualityIssues === 'number') {
+        // Fallback for old data if any
+        totalQualityIssues += supplier.qualityIssues;
+      }
 
-        // Count Expiring Certs
-        if (supplier.certifications && supplier.certifications.length > 0) {
-            supplier.certifications.forEach(cert => {
-                const expiryDate = typeof cert === 'object' && cert.expiryDate ? new Date(cert.expiryDate) : null;
-                if (expiryDate && expiryDate >= today && expiryDate <= thirtyDaysFromNow) {
-                    expiringCertsCount++;
-                }
-            });
-        }
-        
-        if (supplier.status === 'Pending') pendingSuppliersCount++;
-        if (supplier.status === 'Approved') approvedSuppliersCount++;
+      // Count Expiring Certs
+      if (supplier.certifications && supplier.certifications.length > 0) {
+        supplier.certifications.forEach(cert => {
+          const expiryDate = typeof cert === 'object' && cert.expiryDate ? new Date(cert.expiryDate) : null;
+          if (expiryDate && expiryDate >= today && expiryDate <= thirtyDaysFromNow) {
+            expiringCertsCount++;
+          }
+        });
+      }
+
+      if (supplier.status === 'Pending') pendingSuppliersCount++;
+      if (supplier.status === 'Approved') approvedSuppliersCount++;
     });
 
     const totalSupplierAlerts = totalQualityIssues + expiringCertsCount;
 
     const [
-        activeBatches,
-        lowStockMaterials,
+      activeBatches,
+      lowStockMaterialsCount,
     ] = await Promise.all([
       Batch.countDocuments({ status: 'Active' }),
       RawMaterial.countDocuments({ status: 'Low Stock' }),
     ]);
+
+    const totalImportantAlerts = totalQualityIssues + expiringCertsCount + lowStockMaterialsCount;
 
     const stats = {
       totalRawMaterials: {
         value: await RawMaterial.countDocuments(),
       },
       activeSuppliers: {
-        value: approvedSuppliersCount, // Fixing this logic to be meaningful
+        value: approvedSuppliersCount,
       },
       activeBatches: {
         value: activeBatches,
       },
-      pendingAlerts: { // This key is used by frontend "Pending Alerts" card, we will rename the label in frontend but keep key or change valid? 
-        // The frontend uses stats.pendingAlerts.value. 
-        // I will send the new TOTAL ALERT COUNT here.
-        value: totalSupplierAlerts,
+      pendingAlerts: {
+        value: totalImportantAlerts,
       },
     };
 
@@ -126,23 +126,23 @@ router.get('/supplier-alerts', protect, admin, async (req, res) => {
       // Check Quality Issues
       if (Array.isArray(supplier.qualityIssues) && supplier.qualityIssues.length > 0) {
         supplier.qualityIssues.forEach(issue => {
-             alerts.push({
-                type: 'Quality Issue',
-                message: `${supplier.name} - ${issue.description} (${new Date(issue.date).toLocaleDateString()})`,
-                supplier: supplier.name,
-                severity: 'high',
-                date: new Date(issue.date)
-             });
-        });
-      } else if (typeof supplier.qualityIssues === 'number' && supplier.qualityIssues > 0) {
-         // Legacy support
-         alerts.push({
-            type: 'Quality Issues',
-            message: `${supplier.name} - ${supplier.qualityIssues} quality issue(s)`,
+          alerts.push({
+            type: 'Quality Issue',
+            message: `${supplier.name} - ${issue.description} (${new Date(issue.date).toLocaleDateString()})`,
             supplier: supplier.name,
             severity: 'high',
-            date: new Date()
-         });
+            date: new Date(issue.date)
+          });
+        });
+      } else if (typeof supplier.qualityIssues === 'number' && supplier.qualityIssues > 0) {
+        // Legacy support
+        alerts.push({
+          type: 'Quality Issues',
+          message: `${supplier.name} - ${supplier.qualityIssues} quality issue(s)`,
+          supplier: supplier.name,
+          severity: 'high',
+          date: new Date()
+        });
       }
 
       // Check Expiring Certifications
@@ -172,9 +172,22 @@ router.get('/supplier-alerts', protect, admin, async (req, res) => {
         if (a.severity !== 'high' && b.severity === 'high') return 1;
         return 0; // Could add secondary sort by date
       });
-      // Removed .slice(0, 5) to show all alerts as implied by "list all issues" request, or should I keep a limit? 
-      // User said "list all issues that each supplier has". I will remove the limit or increase it significantly. 
-      // I'll keep it unbounded for now as requested "list all".
+    // Removed .slice(0, 5) to show all alerts as implied by "list all issues" request, or should I keep a limit? 
+    // User said "list all issues that each supplier has". I will remove the limit or increase it significantly. 
+    // I'll keep it unbounded for now as requested "list all".
+
+    // Get low stock raw materials
+    const lowStockMaterials = await RawMaterial.find({ status: 'Low Stock' }).populate('supplier', 'name');
+
+    lowStockMaterials.forEach(material => {
+      alerts.push({
+        type: 'Low Stock',
+        message: `${material.name} is low on stock (${material.quantity.value} ${material.quantity.unit} remaining)`,
+        supplier: material.supplier ? material.supplier.name : 'Unknown',
+        severity: 'high',
+        date: new Date()
+      });
+    });
 
     res.json(sortedAlerts);
   } catch (error) {

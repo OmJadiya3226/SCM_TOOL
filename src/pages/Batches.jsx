@@ -11,6 +11,9 @@ const Batches = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [sourceFilter, setSourceFilter] = useState('')
+  const [buyerFilter, setBuyerFilter] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isOverlayOpen, setIsOverlayOpen] = useState(false)
   const [suppliers, setSuppliers] = useState([])
   const [rawMaterials, setRawMaterials] = useState([])
@@ -35,11 +38,11 @@ const Batches = () => {
 
   useEffect(() => {
     fetchBatches()
-    if (isOverlayOpen) {
+    if (isOverlayOpen || isFilterOpen) {
       fetchSuppliers()
       fetchRawMaterials()
     }
-  }, [searchTerm, statusFilter, isOverlayOpen])
+  }, [searchTerm, statusFilter, sourceFilter, buyerFilter, isOverlayOpen, isFilterOpen])
 
   const fetchBatches = async () => {
     try {
@@ -47,6 +50,8 @@ const Batches = () => {
       const params = {}
       if (searchTerm) params.search = searchTerm
       if (statusFilter) params.status = statusFilter
+      if (sourceFilter) params.source = sourceFilter
+      if (buyerFilter) params.buyer = buyerFilter
 
       const data = await batchesAPI.getAll(params)
       setBatches(data)
@@ -255,10 +260,71 @@ const Batches = () => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-          <button className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <Filter className="w-5 h-5 mr-2 text-gray-600" />
-            Filter
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`flex items-center px-4 py-2 border rounded-lg transition-colors ${isFilterOpen ? 'bg-primary-50 border-primary-500 text-primary-700' : 'border-gray-300 hover:bg-gray-50'
+                }`}
+            >
+              <Filter className="w-5 h-5 mr-2" />
+              Filter
+            </button>
+            {isFilterOpen && (
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-10 p-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="Active">Active</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Source Supplier</label>
+                    <select
+                      value={sourceFilter}
+                      onChange={(e) => setSourceFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">All Suppliers</option>
+                      {suppliers.map(s => (
+                        <option key={s._id} value={s._id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Buyer</label>
+                    <input
+                      type="text"
+                      value={buyerFilter}
+                      onChange={(e) => setBuyerFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Buyer name"
+                    />
+                  </div>
+                  {(statusFilter || sourceFilter || buyerFilter) && (
+                    <button
+                      onClick={() => {
+                        setStatusFilter('')
+                        setSourceFilter('')
+                        setBuyerFilter('')
+                        setIsFilterOpen(false)
+                      }}
+                      className="w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -601,92 +667,94 @@ const Batches = () => {
 
       {/* View Batch Modal */}
       {viewingBatch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Batch Details</h2>
-              <button
-                onClick={() => setViewingBatch(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Batch Number</label>
-                <p className="mt-1 text-gray-900">{viewingBatch.batchNumber}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Raw Material</label>
-                  <p className="mt-1 text-gray-900">
-                    {typeof viewingBatch.rawMaterial === 'object' ? viewingBatch.rawMaterial.name : viewingBatch.rawMaterial}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Source Supplier</label>
-                  <p className="mt-1 text-gray-900">
-                    {typeof viewingBatch.source === 'object' && viewingBatch.source
-                      ? viewingBatch.source.name
-                      : viewingBatch.source || 'N/A'}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Production Date</label>
-                  <p className="mt-1 text-gray-900">{new Date(viewingBatch.productionDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Acquisition Date</label>
-                  <p className="mt-1 text-gray-900">{new Date(viewingBatch.acquisitionDate).toLocaleDateString()}</p>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Buyer</label>
-                <p className="mt-1 text-gray-900">{viewingBatch.buyer}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Contents</label>
-                <p className="mt-1 text-gray-900">{viewingBatch.contents}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Quantity</label>
-                  <p className="mt-1 text-gray-900">
-                    {viewingBatch.quantity?.value} {viewingBatch.quantity?.unit}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Status</label>
-                  <span className={`mt-1 inline-block px-2 py-1 text-xs font-medium rounded-full ${viewingBatch.status === 'Active'
-                    ? 'bg-green-100 text-green-800'
-                    : viewingBatch.status === 'Completed'
-                      ? 'bg-gray-100 text-gray-800'
-                      : 'bg-red-100 text-red-800'
-                    }`}>
-                    {viewingBatch.status}
-                  </span>
-                </div>
-              </div>
-              {viewingBatch.notes && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Notes</label>
-                  <p className="mt-1 text-gray-900">{viewingBatch.notes}</p>
-                </div>
-              )}
-              <div className="flex justify-end pt-4 border-t border-gray-200">
+        <Modal>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Batch Details</h2>
                 <button
                   onClick={() => setViewingBatch(null)}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  Close
+                  <X className="w-5 h-5 text-gray-600" />
                 </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Batch Number</label>
+                  <p className="mt-1 text-gray-900">{viewingBatch.batchNumber}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Raw Material</label>
+                    <p className="mt-1 text-gray-900">
+                      {typeof viewingBatch.rawMaterial === 'object' ? viewingBatch.rawMaterial.name : viewingBatch.rawMaterial}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Source Supplier</label>
+                    <p className="mt-1 text-gray-900">
+                      {typeof viewingBatch.source === 'object' && viewingBatch.source
+                        ? viewingBatch.source.name
+                        : viewingBatch.source || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Production Date</label>
+                    <p className="mt-1 text-gray-900">{new Date(viewingBatch.productionDate).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Acquisition Date</label>
+                    <p className="mt-1 text-gray-900">{new Date(viewingBatch.acquisitionDate).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Buyer</label>
+                  <p className="mt-1 text-gray-900">{viewingBatch.buyer}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Contents</label>
+                  <p className="mt-1 text-gray-900">{viewingBatch.contents}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Quantity</label>
+                    <p className="mt-1 text-gray-900">
+                      {viewingBatch.quantity?.value} {viewingBatch.quantity?.unit}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Status</label>
+                    <span className={`mt-1 inline-block px-2 py-1 text-xs font-medium rounded-full ${viewingBatch.status === 'Active'
+                      ? 'bg-green-100 text-green-800'
+                      : viewingBatch.status === 'Completed'
+                        ? 'bg-gray-100 text-gray-800'
+                        : 'bg-red-100 text-red-800'
+                      }`}>
+                      {viewingBatch.status}
+                    </span>
+                  </div>
+                </div>
+                {viewingBatch.notes && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Notes</label>
+                    <p className="mt-1 text-gray-900">{viewingBatch.notes}</p>
+                  </div>
+                )}
+                <div className="flex justify-end pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => setViewingBatch(null)}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

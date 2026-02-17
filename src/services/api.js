@@ -45,6 +45,13 @@ export const authAPI = {
     body: { name, email, password, role, secretPassword },
   }),
   getMe: () => apiRequest('/auth/me'),
+  changePassword: (currentPassword, newPassword) => apiRequest('/auth/change-password', {
+    method: 'POST',
+    body: { currentPassword, newPassword },
+  }),
+  deleteAccount: () => apiRequest('/auth/me', {
+    method: 'DELETE',
+  }),
 };
 
 // Suppliers API

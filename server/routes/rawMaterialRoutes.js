@@ -9,7 +9,7 @@ const router = express.Router();
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { search, status, supplier } = req.query;
+    const { search, status, supplier, hazardClass } = req.query;
     let query = {};
 
     if (search) {
@@ -24,10 +24,14 @@ router.get('/', protect, async (req, res) => {
       query.supplier = supplier;
     }
 
+    if (hazardClass) {
+      query.hazardClass = hazardClass;
+    }
+
     const materials = await RawMaterial.find(query)
       .populate('supplier', 'name status')
       .sort({ createdAt: -1 });
-    
+
     res.json(materials);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -41,7 +45,7 @@ router.get('/:id', protect, async (req, res) => {
   try {
     const material = await RawMaterial.findById(req.params.id)
       .populate('supplier', 'name status certifications');
-    
+
     if (!material) {
       return res.status(404).json({ message: 'Raw material not found' });
     }
@@ -60,7 +64,7 @@ router.post('/', protect, async (req, res) => {
     const material = await RawMaterial.create(req.body);
     const populatedMaterial = await RawMaterial.findById(material._id)
       .populate('supplier', 'name status');
-    
+
     res.status(201).json(populatedMaterial);
   } catch (error) {
     res.status(400).json({ message: error.message });

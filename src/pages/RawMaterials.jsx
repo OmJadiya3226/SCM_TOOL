@@ -11,6 +11,9 @@ const RawMaterials = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [supplierFilter, setSupplierFilter] = useState('')
+  const [hazardClassFilter, setHazardClassFilter] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isOverlayOpen, setIsOverlayOpen] = useState(false)
   const [suppliers, setSuppliers] = useState([])
   const [formData, setFormData] = useState({
@@ -34,10 +37,10 @@ const RawMaterials = () => {
 
   useEffect(() => {
     fetchMaterials()
-    if (isOverlayOpen) {
+    if (isOverlayOpen || isFilterOpen) {
       fetchSuppliers()
     }
-  }, [searchTerm, statusFilter, isOverlayOpen])
+  }, [searchTerm, statusFilter, supplierFilter, hazardClassFilter, isOverlayOpen, isFilterOpen])
 
   const fetchMaterials = async () => {
     try {
@@ -45,6 +48,8 @@ const RawMaterials = () => {
       const params = {}
       if (searchTerm) params.search = searchTerm
       if (statusFilter) params.status = statusFilter
+      if (supplierFilter) params.supplier = supplierFilter
+      if (hazardClassFilter) params.hazardClass = hazardClassFilter
 
       const data = await rawMaterialsAPI.getAll(params)
       setMaterials(data)
@@ -242,10 +247,71 @@ const RawMaterials = () => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-          <button className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <Filter className="w-5 h-5 mr-2 text-gray-600" />
-            Filter
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`flex items-center px-4 py-2 border rounded-lg transition-colors ${isFilterOpen ? 'bg-primary-50 border-primary-500 text-primary-700' : 'border-gray-300 hover:bg-gray-50'
+                }`}
+            >
+              <Filter className="w-5 h-5 mr-2" />
+              Filter
+            </button>
+            {isFilterOpen && (
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-10 p-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="In Stock">In Stock</option>
+                      <option value="Low Stock">Low Stock</option>
+                      <option value="Out of Stock">Out of Stock</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+                    <select
+                      value={supplierFilter}
+                      onChange={(e) => setSupplierFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">All Suppliers</option>
+                      {suppliers.map(s => (
+                        <option key={s._id} value={s._id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Hazard Class</label>
+                    <input
+                      type="text"
+                      value={hazardClassFilter}
+                      onChange={(e) => setHazardClassFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g. Class 3"
+                    />
+                  </div>
+                  {(statusFilter || supplierFilter || hazardClassFilter) && (
+                    <button
+                      onClick={() => {
+                        setStatusFilter('')
+                        setSupplierFilter('')
+                        setHazardClassFilter('')
+                        setIsFilterOpen(false)
+                      }}
+                      className="w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -573,94 +639,96 @@ const RawMaterials = () => {
 
       {/* View Raw Material Modal */}
       {viewingMaterial && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Raw Material Details</h2>
-              <button
-                onClick={() => setViewingMaterial(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Name</label>
-                <p className="mt-1 text-gray-900">{viewingMaterial.name}</p>
+        <Modal>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Raw Material Details</h2>
+                <button
+                  onClick={() => setViewingMaterial(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Purity</label>
-                  <p className="mt-1 text-gray-900">{viewingMaterial.purity}</p>
+                  <label className="block text-sm font-medium text-gray-700">Name</label>
+                  <p className="mt-1 text-gray-900">{viewingMaterial.name}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Purity</label>
+                    <p className="mt-1 text-gray-900">{viewingMaterial.purity}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Hazard Class</label>
+                    <span className="mt-1 inline-block px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">
+                      {viewingMaterial.hazardClass}
+                    </span>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Hazard Class</label>
-                  <span className="mt-1 inline-block px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">
-                    {viewingMaterial.hazardClass}
-                  </span>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Supplier</label>
-                <p className="mt-1 text-gray-900">
-                  {typeof viewingMaterial.supplier === 'object' && viewingMaterial.supplier
-                    ? viewingMaterial.supplier.name
-                    : viewingMaterial.supplier || 'N/A'}
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Storage Temperature</label>
-                <p className="mt-1 text-gray-900">{viewingMaterial.storageTemp}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Quantity</label>
+                  <label className="block text-sm font-medium text-gray-700">Supplier</label>
                   <p className="mt-1 text-gray-900">
-                    {viewingMaterial.quantity?.value} {viewingMaterial.quantity?.unit}
+                    {typeof viewingMaterial.supplier === 'object' && viewingMaterial.supplier
+                      ? viewingMaterial.supplier.name
+                      : viewingMaterial.supplier || 'N/A'}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Status</label>
-                  <span className={`mt-1 inline-block px-2 py-1 text-xs font-medium rounded-full ${viewingMaterial.status === 'In Stock'
-                    ? 'bg-green-100 text-green-800'
-                    : viewingMaterial.status === 'Low Stock'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                    }`}>
-                    {viewingMaterial.status}
-                  </span>
+                  <label className="block text-sm font-medium text-gray-700">Storage Temperature</label>
+                  <p className="mt-1 text-gray-900">{viewingMaterial.storageTemp}</p>
                 </div>
-              </div>
-              {viewingMaterial.expiryDate && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
-                  <p className="mt-1 text-gray-900">{new Date(viewingMaterial.expiryDate).toLocaleDateString()}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Quantity</label>
+                    <p className="mt-1 text-gray-900">
+                      {viewingMaterial.quantity?.value} {viewingMaterial.quantity?.unit}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Status</label>
+                    <span className={`mt-1 inline-block px-2 py-1 text-xs font-medium rounded-full ${viewingMaterial.status === 'In Stock'
+                      ? 'bg-green-100 text-green-800'
+                      : viewingMaterial.status === 'Low Stock'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
+                      }`}>
+                      {viewingMaterial.status}
+                    </span>
+                  </div>
                 </div>
-              )}
-              {viewingMaterial.lotNumber && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Lot Number</label>
-                  <p className="mt-1 text-gray-900">{viewingMaterial.lotNumber}</p>
+                {viewingMaterial.expiryDate && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
+                    <p className="mt-1 text-gray-900">{new Date(viewingMaterial.expiryDate).toLocaleDateString()}</p>
+                  </div>
+                )}
+                {viewingMaterial.lotNumber && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Lot Number</label>
+                    <p className="mt-1 text-gray-900">{viewingMaterial.lotNumber}</p>
+                  </div>
+                )}
+                {viewingMaterial.description && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <p className="mt-1 text-gray-900">{viewingMaterial.description}</p>
+                  </div>
+                )}
+                <div className="flex justify-end pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => setViewingMaterial(null)}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    Close
+                  </button>
                 </div>
-              )}
-              {viewingMaterial.description && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Description</label>
-                  <p className="mt-1 text-gray-900">{viewingMaterial.description}</p>
-                </div>
-              )}
-              <div className="flex justify-end pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => setViewingMaterial(null)}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

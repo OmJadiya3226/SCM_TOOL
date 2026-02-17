@@ -9,7 +9,7 @@ const router = express.Router();
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { search, status } = req.query;
+    const { search, status, source, buyer } = req.query;
     let query = {};
 
     if (search) {
@@ -23,11 +23,19 @@ router.get('/', protect, async (req, res) => {
       query.status = status;
     }
 
+    if (source) {
+      query.source = source;
+    }
+
+    if (buyer) {
+      query.buyer = buyer;
+    }
+
     const batches = await Batch.find(query)
       .populate('rawMaterial', 'name purity')
       .populate('source', 'name status')
       .sort({ createdAt: -1 });
-    
+
     res.json(batches);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -42,7 +50,7 @@ router.get('/:id', protect, async (req, res) => {
     const batch = await Batch.findById(req.params.id)
       .populate('rawMaterial', 'name purity hazardClass storageTemp')
       .populate('source', 'name status certifications');
-    
+
     if (!batch) {
       return res.status(404).json({ message: 'Batch not found' });
     }
@@ -62,7 +70,7 @@ router.post('/', protect, async (req, res) => {
     const populatedBatch = await Batch.findById(batch._id)
       .populate('rawMaterial', 'name purity')
       .populate('source', 'name status');
-    
+
     res.status(201).json(populatedBatch);
   } catch (error) {
     res.status(400).json({ message: error.message });

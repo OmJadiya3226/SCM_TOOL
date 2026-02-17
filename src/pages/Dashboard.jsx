@@ -27,7 +27,7 @@ const Dashboard = () => {
       color: 'bg-purple-500',
     },
     {
-      title: 'Supplier Alerts',
+      title: 'Important Alerts',
       value: '0',
       icon: AlertTriangle,
       color: 'bg-red-500',
@@ -81,7 +81,7 @@ const Dashboard = () => {
             color: 'bg-purple-500',
           },
           {
-            title: 'Supplier Alerts',
+            title: 'Important Alerts',
             value: statsData.value.pendingAlerts.value.toString(),
             icon: AlertTriangle,
             color: 'bg-red-500',
@@ -169,7 +169,7 @@ const Dashboard = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Supplier Alerts</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Important Alerts</h2>
           {loading ? (
             <div className="text-center py-8 text-gray-500">Loading...</div>
           ) : supplierAlerts.length === 0 ? (
