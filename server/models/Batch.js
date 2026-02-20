@@ -55,6 +55,11 @@ const batchSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  approvalStatus: {
+    type: String,
+    enum: ['Pending', 'Approved', 'Rejected'],
+    default: 'Pending',
+  },
 }, {
   timestamps: true,
 });

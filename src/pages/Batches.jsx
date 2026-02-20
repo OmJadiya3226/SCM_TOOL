@@ -7,6 +7,7 @@ import Modal from '../components/common/Modal'
 const Batches = () => {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
+  const isQA = user?.role === 'qa-worker'
   const [batches, setBatches] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -30,7 +31,12 @@ const Batches = () => {
       value: '',
       unit: 'kg',
     },
+    quantity: {
+      value: '',
+      unit: 'kg',
+    },
     notes: '',
+    approvalStatus: 'Pending',
   })
   const [submitting, setSubmitting] = useState(false)
   const [viewingBatch, setViewingBatch] = useState(null)
@@ -84,6 +90,35 @@ const Batches = () => {
     e.preventDefault()
     try {
       setSubmitting(true)
+
+      // If QA worker, only update notes and approval status
+      if (isQA && editingBatch) {
+        await batchesAPI.updateReview(editingBatch._id, {
+          notes: formData.notes,
+          approvalStatus: formData.approvalStatus
+        })
+        setIsOverlayOpen(false)
+        setEditingBatch(null)
+        setFormData({
+          batchNumber: '',
+          rawMaterial: '',
+          source: '',
+          productionDate: '',
+          acquisitionDate: '',
+          buyer: '',
+          contents: '',
+          status: 'Active',
+          quantity: {
+            value: '',
+            unit: 'kg',
+          },
+          notes: '',
+          approvalStatus: 'Pending',
+        })
+        fetchBatches()
+        return
+      }
+
       const submitData = {
         ...formData,
         quantity: {
@@ -134,7 +169,12 @@ const Batches = () => {
         value: '',
         unit: 'kg',
       },
+      quantity: {
+        value: '',
+        unit: 'kg',
+      },
       notes: '',
+      approvalStatus: 'Pending',
     })
   }
 
@@ -170,6 +210,7 @@ const Batches = () => {
           unit: batch.quantity?.unit || 'kg',
         },
         notes: batch.notes || '',
+        approvalStatus: batch.approvalStatus || 'Pending',
       })
       setIsOverlayOpen(true)
     } catch (error) {
@@ -192,6 +233,10 @@ const Batches = () => {
   }
 
   const handleUpdate = async (e) => {
+    // If QA worker, redirect to handleSubmit which handles notes update
+    if (isQA) {
+      return handleSubmit(e)
+    }
     e.preventDefault()
     try {
       setSubmitting(true)
@@ -238,13 +283,15 @@ const Batches = () => {
           <h1 className="text-3xl font-bold text-gray-900">Batches</h1>
           <p className="mt-2 text-gray-600">Track batch data including source, production date, buyer, and contents</p>
         </div>
-        <button
-          onClick={() => setIsOverlayOpen(true)}
-          className="mt-4 md:mt-0 flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Create Batch
-        </button>
+        {!isQA && (
+          <button
+            onClick={() => setIsOverlayOpen(true)}
+            className="mt-4 md:mt-0 flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Create Batch
+          </button>
+        )}
       </div>
 
       {/* Filters and Search */}
@@ -355,6 +402,9 @@ const Batches = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Approval
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -417,6 +467,18 @@ const Batches = () => {
                         {batch.status}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${batch.approvalStatus === 'Approved'
+                          ? 'bg-green-100 text-green-800'
+                          : batch.approvalStatus === 'Rejected'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                      >
+                        {batch.approvalStatus || 'Pending'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => handleView(batch._id)}
@@ -440,6 +502,14 @@ const Batches = () => {
                           </button>
                         </>
                       )}
+                      {isQA && (
+                        <button
+                          onClick={() => handleEdit(batch._id)}
+                          className="text-gray-600 hover:text-gray-900 mr-4"
+                        >
+                          Review
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -450,313 +520,352 @@ const Batches = () => {
       </div>
 
       {/* Create Batch Overlay */}
-      {isOverlayOpen && (
-        <Modal>
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {editingBatch ? 'Edit Batch' : 'Create New Batch'}
-                </h2>
-                <button
-                  onClick={handleCloseOverlay}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-              <form onSubmit={editingBatch ? handleUpdate : handleSubmit} className="p-6 space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Batch Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    disabled={!!editingBatch}
-                    value={formData.batchNumber}
-                    onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    placeholder="Enter batch number"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Raw Material <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={formData.rawMaterial}
-                      onChange={(e) => setFormData({ ...formData, rawMaterial: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="">Select raw material</option>
-                      {rawMaterials.map((material) => (
-                        <option key={material._id} value={material._id}>
-                          {material.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Source Supplier <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={formData.source}
-                      onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="">Select supplier</option>
-                      {suppliers.map((supplier) => (
-                        <option key={supplier._id} value={supplier._id}>
-                          {supplier.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Production Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.productionDate}
-                      onChange={(e) => setFormData({ ...formData, productionDate: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Acquisition Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.acquisitionDate}
-                      onChange={(e) => setFormData({ ...formData, acquisitionDate: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Buyer <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.buyer}
-                    onChange={(e) => setFormData({ ...formData, buyer: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Enter buyer name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contents <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.contents}
-                    onChange={(e) => setFormData({ ...formData, contents: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Enter contents description"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Quantity Value <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      step="0.01"
-                      min="0"
-                      value={formData.quantity.value}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        quantity: { ...formData.quantity, value: e.target.value },
-                      })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Unit <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={formData.quantity.unit}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        quantity: { ...formData.quantity, unit: e.target.value },
-                      })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="kg">kg</option>
-                      <option value="L">L</option>
-                      <option value="g">g</option>
-                      <option value="mL">mL</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Additional notes..."
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+      {
+        isOverlayOpen && (
+          <Modal>
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {editingBatch ? (isQA ? 'Review Batch' : 'Edit Batch') : 'Create New Batch'}
+                  </h2>
                   <button
-                    type="button"
                     onClick={handleCloseOverlay}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {submitting ? (editingBatch ? 'Updating...' : 'Creating...') : (editingBatch ? 'Update Batch' : 'Create Batch')}
+                    <X className="w-5 h-5 text-gray-600" />
                   </button>
                 </div>
-              </form>
+                <form onSubmit={editingBatch ? handleUpdate : handleSubmit} className="p-6 space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Batch Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      disabled={!!editingBatch || isQA}
+                      value={formData.batchNumber}
+                      onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      placeholder="Enter batch number"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Raw Material <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        disabled={isQA}
+                        value={formData.rawMaterial}
+                        onChange={(e) => setFormData({ ...formData, rawMaterial: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="">Select raw material</option>
+                        {rawMaterials.map((material) => (
+                          <option key={material._id} value={material._id}>
+                            {material.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Source Supplier <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        disabled={isQA}
+                        value={formData.source}
+                        onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="">Select supplier</option>
+                        {suppliers.map((supplier) => (
+                          <option key={supplier._id} value={supplier._id}>
+                            {supplier.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Production Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        disabled={isQA}
+                        value={formData.productionDate}
+                        onChange={(e) => setFormData({ ...formData, productionDate: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Acquisition Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        disabled={isQA}
+                        value={formData.acquisitionDate}
+                        onChange={(e) => setFormData({ ...formData, acquisitionDate: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Buyer <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      disabled={isQA}
+                      value={formData.buyer}
+                      onChange={(e) => setFormData({ ...formData, buyer: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Enter buyer name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contents <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      disabled={isQA}
+                      value={formData.contents}
+                      onChange={(e) => setFormData({ ...formData, contents: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Enter contents description"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Quantity Value <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        disabled={isQA}
+                        step="0.01"
+                        min="0"
+                        value={formData.quantity.value}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          quantity: { ...formData.quantity, value: e.target.value },
+                        })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Unit <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        disabled={isQA}
+                        value={formData.quantity.unit}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          quantity: { ...formData.quantity, unit: e.target.value },
+                        })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="kg">kg</option>
+                        <option value="L">L</option>
+                        <option value="g">g</option>
+                        <option value="mL">mL</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={formData.status}
+                      disabled={isQA}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Notes
+                    </label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Additional notes..."
+                    />
+                  </div>
+
+                  {(editingBatch && (isQA || isAdmin)) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Approval Status
+                      </label>
+                      <select
+                        value={formData.approvalStatus}
+                        onChange={(e) => setFormData({ ...formData, approvalStatus: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={handleCloseOverlay}
+                      className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {submitting ? (editingBatch ? 'Updating...' : 'Creating...') : (editingBatch ? (isQA ? 'Test Update' : 'Update Batch') : 'Create Batch')}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        )
+      }
 
       {/* View Batch Modal */}
-      {viewingBatch && (
-        <Modal>
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">Batch Details</h2>
-                <button
-                  onClick={() => setViewingBatch(null)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Batch Number</label>
-                  <p className="mt-1 text-gray-900">{viewingBatch.batchNumber}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Raw Material</label>
-                    <p className="mt-1 text-gray-900">
-                      {typeof viewingBatch.rawMaterial === 'object' ? viewingBatch.rawMaterial.name : viewingBatch.rawMaterial}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Source Supplier</label>
-                    <p className="mt-1 text-gray-900">
-                      {typeof viewingBatch.source === 'object' && viewingBatch.source
-                        ? viewingBatch.source.name
-                        : viewingBatch.source || 'N/A'}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Production Date</label>
-                    <p className="mt-1 text-gray-900">{new Date(viewingBatch.productionDate).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Acquisition Date</label>
-                    <p className="mt-1 text-gray-900">{new Date(viewingBatch.acquisitionDate).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Buyer</label>
-                  <p className="mt-1 text-gray-900">{viewingBatch.buyer}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Contents</label>
-                  <p className="mt-1 text-gray-900">{viewingBatch.contents}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Quantity</label>
-                    <p className="mt-1 text-gray-900">
-                      {viewingBatch.quantity?.value} {viewingBatch.quantity?.unit}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Status</label>
-                    <span className={`mt-1 inline-block px-2 py-1 text-xs font-medium rounded-full ${viewingBatch.status === 'Active'
-                      ? 'bg-green-100 text-green-800'
-                      : viewingBatch.status === 'Completed'
-                        ? 'bg-gray-100 text-gray-800'
-                        : 'bg-red-100 text-red-800'
-                      }`}>
-                      {viewingBatch.status}
-                    </span>
-                  </div>
-                </div>
-                {viewingBatch.notes && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Notes</label>
-                    <p className="mt-1 text-gray-900">{viewingBatch.notes}</p>
-                  </div>
-                )}
-                <div className="flex justify-end pt-4 border-t border-gray-200">
+      {
+        viewingBatch && (
+          <Modal>
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900">Batch Details</h2>
                   <button
                     onClick={() => setViewingBatch(null)}
-                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                   >
-                    Close
+                    <X className="w-5 h-5 text-gray-600" />
                   </button>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Batch Number</label>
+                    <p className="mt-1 text-gray-900">{viewingBatch.batchNumber}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Raw Material</label>
+                      <p className="mt-1 text-gray-900">
+                        {typeof viewingBatch.rawMaterial === 'object' ? viewingBatch.rawMaterial.name : viewingBatch.rawMaterial}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Source Supplier</label>
+                      <p className="mt-1 text-gray-900">
+                        {typeof viewingBatch.source === 'object' && viewingBatch.source
+                          ? viewingBatch.source.name
+                          : viewingBatch.source || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Production Date</label>
+                      <p className="mt-1 text-gray-900">{new Date(viewingBatch.productionDate).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Acquisition Date</label>
+                      <p className="mt-1 text-gray-900">{new Date(viewingBatch.acquisitionDate).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Buyer</label>
+                    <p className="mt-1 text-gray-900">{viewingBatch.buyer}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Contents</label>
+                    <p className="mt-1 text-gray-900">{viewingBatch.contents}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Quantity</label>
+                      <p className="mt-1 text-gray-900">
+                        {viewingBatch.quantity?.value} {viewingBatch.quantity?.unit}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Status</label>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1
+                        ${viewingBatch.status === 'Active' ? 'bg-green-100 text-green-800' :
+                          viewingBatch.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                            'bg-red-100 text-red-800'}`}>
+                        {viewingBatch.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Approval Status</label>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1
+                        ${viewingBatch.approvalStatus === 'Approved' ? 'bg-green-100 text-green-800' :
+                          viewingBatch.approvalStatus === 'Rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'}`}>
+                        {viewingBatch.approvalStatus || 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                  {viewingBatch.notes && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Notes</label>
+                      <p className="mt-1 text-gray-900">{viewingBatch.notes}</p>
+                    </div>
+                  )}
+                  <div className="flex justify-end pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => setViewingBatch(null)}
+                      className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </Modal>
-      )}
-    </div>
+          </Modal>
+        )
+      }
+    </div >
   )
 }
 

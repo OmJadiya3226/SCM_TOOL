@@ -11,7 +11,8 @@ import Register from './pages/Register'
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, loading, user } = useAuth()
+  const location = window.location
 
   if (loading) {
     return (
@@ -21,7 +22,16 @@ const ProtectedRoute = ({ children }) => {
     )
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  // Redirect QA worker to /batches if trying to access dashboard/root
+  if (user?.role === 'qa-worker' && (location.pathname === '/' || location.pathname === '/dashboard')) {
+    return <Navigate to="/batches" replace />
+  }
+
+  return children
 }
 
 function App() {

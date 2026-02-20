@@ -135,12 +135,13 @@ const Register = () => {
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
+                <option value="qa-worker">QA Worker</option>
               </select>
             </div>
 
             <div>
               <label htmlFor="secretPassword" className="block text-sm font-medium text-gray-700">
-                {formData.role === 'admin' ? 'Admin' : 'User'} Secret Password
+                {formData.role === 'admin' ? 'Admin' : formData.role === 'qa-worker' ? 'QA Worker' : 'User'} Secret Password
               </label>
               <input
                 id="secretPassword"

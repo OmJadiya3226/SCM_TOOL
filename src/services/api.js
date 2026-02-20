@@ -112,6 +112,10 @@ export const batchesAPI = {
   delete: (id) => apiRequest(`/batches/${id}`, {
     method: 'DELETE',
   }),
+  updateReview: (id, { notes, approvalStatus }) => apiRequest(`/batches/${id}/review`, {
+    method: 'PATCH',
+    body: { notes, approvalStatus },
+  }),
 };
 
 // Dashboard API

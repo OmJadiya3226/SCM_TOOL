@@ -100,6 +100,37 @@ router.put('/:id', protect, admin, async (req, res) => {
   }
 });
 
+// @route   PATCH /api/batches/:id/review
+// @desc    Update batch review (notes & approval status) (Admin & QA only)
+// @access  Private/Admin/QA
+router.patch('/:id/review', protect, async (req, res) => {
+  try {
+    // Check if user is admin or qa-worker
+    if (req.user.role !== 'admin' && req.user.role !== 'qa-worker') {
+      return res.status(403).json({ message: 'Not authorized to review batches' });
+    }
+
+    const { notes, approvalStatus } = req.body;
+    const updateData = {};
+    if (notes !== undefined) updateData.notes = notes;
+    if (approvalStatus !== undefined) updateData.approvalStatus = approvalStatus;
+
+    const batch = await Batch.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!batch) {
+      return res.status(404).json({ message: 'Batch not found' });
+    }
+
+    res.json(batch);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 // @route   DELETE /api/batches/:id
 // @desc    Delete batch
 // @access  Private

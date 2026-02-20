@@ -61,12 +61,14 @@ router.get('/stats', protect, admin, async (req, res) => {
     const [
       activeBatches,
       lowStockMaterialsCount,
+      rejectedBatchesCount,
     ] = await Promise.all([
       Batch.countDocuments({ status: 'Active' }),
       RawMaterial.countDocuments({ status: 'Low Stock' }),
+      Batch.countDocuments({ approvalStatus: 'Rejected' }),
     ]);
 
-    const totalImportantAlerts = totalQualityIssues + expiringCertsCount + lowStockMaterialsCount;
+    const totalImportantAlerts = totalQualityIssues + expiringCertsCount + lowStockMaterialsCount + rejectedBatchesCount;
 
     const stats = {
       totalRawMaterials: {
@@ -176,8 +178,13 @@ router.get('/supplier-alerts', protect, admin, async (req, res) => {
     // User said "list all issues that each supplier has". I will remove the limit or increase it significantly. 
     // I'll keep it unbounded for now as requested "list all".
 
-    // Get low stock raw materials
-    const lowStockMaterials = await RawMaterial.find({ status: 'Low Stock' }).populate('supplier', 'name');
+    const [
+      lowStockMaterials,
+      rejectedBatchesCount, // Destructured rejectedBatchesCount
+    ] = await Promise.all([
+      RawMaterial.find({ status: 'Low Stock' }).populate('supplier', 'name'),
+      Batch.countDocuments({ approvalStatus: 'Rejected' }),
+    ]);
 
     lowStockMaterials.forEach(material => {
       alerts.push({
@@ -186,6 +193,21 @@ router.get('/supplier-alerts', protect, admin, async (req, res) => {
         supplier: material.supplier ? material.supplier.name : 'Unknown',
         severity: 'high',
         date: new Date()
+      });
+    });
+
+    // Get rejected batches
+    const rejectedBatches = await Batch.find({ approvalStatus: 'Rejected' })
+      .populate('rawMaterial', 'name')
+      .populate('source', 'name');
+
+    rejectedBatches.forEach(batch => {
+      alerts.push({
+        type: 'Batch Rejected',
+        message: `Batch ${batch.batchNumber} rejected${batch.notes ? `: ${batch.notes}` : ''}`,
+        supplier: batch.source?.name || 'Unknown', // Or maybe we don't need supplier for this alert type?
+        severity: 'high',
+        date: batch.updatedAt
       });
     });
 

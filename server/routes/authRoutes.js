@@ -31,12 +31,15 @@ router.post('/register', async (req, res) => {
     if (role === 'admin') {
       userRole = 'admin';
       requiredSecret = process.env.ADMIN_SECRET_PASSWORD;
+    } else if (role === 'qa-worker') {
+      userRole = 'qa-worker';
+      requiredSecret = process.env.QA_SECRET_PASSWORD;
     }
 
     // Verify secret password
     if (secretPassword !== requiredSecret) {
       return res.status(403).json({
-        message: `Invalid ${userRole} secret password`
+        message: `Invalid ${role || 'user'} secret password`
       });
     }
 

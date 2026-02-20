@@ -12,11 +12,14 @@ import { useAuth } from '../../context/AuthContext'
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
+  const isQA = user?.role === 'qa-worker'
 
   const menuItems = [
     ...(isAdmin ? [{ path: '/', icon: LayoutDashboard, label: 'Dashboard' }] : []),
-    { path: '/suppliers', icon: Users, label: 'Suppliers' },
-    { path: '/raw-materials', icon: Package, label: 'Raw Materials' },
+    ...(!isQA ? [
+      { path: '/suppliers', icon: Users, label: 'Suppliers' },
+      { path: '/raw-materials', icon: Package, label: 'Raw Materials' },
+    ] : []),
     { path: '/batches', icon: Layers, label: 'Batches' },
   ]
 
