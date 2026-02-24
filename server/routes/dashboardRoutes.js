@@ -217,4 +217,57 @@ router.get('/supplier-alerts', protect, admin, async (req, res) => {
   }
 });
 
+// @route   GET /api/dashboard/chart-data
+// @desc    Get chart data for dashboard (Admin only)
+// @access  Private/Admin
+router.get('/chart-data', protect, admin, async (req, res) => {
+  try {
+    // 1. Supplier Status Distribution
+    const supplierStatuses = await Supplier.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    // 2. Raw Material Inventory Status
+    const materialStatuses = await RawMaterial.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    // 3. Batch Approval Status
+    const batchApprovals = await Batch.aggregate([
+      { $group: { _id: '$approvalStatus', count: { $sum: 1 } } }
+    ]);
+
+    // 4. Top Suppliers by Quality Issues
+    const suppliers = await Supplier.find({});
+    const supplierQualityIssues = suppliers
+      .map(s => ({
+        name: s.name,
+        issueCount: Array.isArray(s.qualityIssues) ? s.qualityIssues.length : 0
+      }))
+      .filter(s => s.issueCount > 0)
+      .sort((a, b) => b.issueCount - a.issueCount)
+      .slice(0, 5);
+
+    // 5. Material Stock Levels (Top 5)
+    const stockLevels = await RawMaterial.find({})
+      .sort({ 'quantity.value': -1 })
+      .limit(5)
+      .select('name quantity');
+
+    res.json({
+      supplierStatus: supplierStatuses,
+      materialStatus: materialStatuses,
+      batchApproval: batchApprovals,
+      supplierQuality: supplierQualityIssues,
+      stockLevels: stockLevels.map(m => ({
+        name: m.name,
+        quantity: m.quantity.value,
+        unit: m.quantity.unit
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 export default router;

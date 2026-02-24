@@ -123,4 +123,5 @@ export const dashboardAPI = {
   getStats: () => apiRequest('/dashboard/stats'),
   getRecentBatches: () => apiRequest('/dashboard/recent-batches'),
   getSupplierAlerts: () => apiRequest('/dashboard/supplier-alerts'),
+  getChartData: () => apiRequest('/dashboard/chart-data'),
 };
