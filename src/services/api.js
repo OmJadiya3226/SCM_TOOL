@@ -118,6 +118,22 @@ export const batchesAPI = {
   }),
 };
 
+// Users API
+export const usersAPI = {
+  getAll: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return apiRequest(`/users${queryString ? `?${queryString}` : ''}`);
+  },
+  getById: (id) => apiRequest(`/users/${id}`),
+  update: (id, data) => apiRequest(`/users/${id}`, {
+    method: 'PUT',
+    body: data,
+  }),
+  delete: (id) => apiRequest(`/users/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
 // Dashboard API
 export const dashboardAPI = {
   getStats: () => apiRequest('/dashboard/stats'),

@@ -8,6 +8,7 @@ import Batches from './pages/Batches'
 import Account from './pages/Account'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import Employees from './pages/Employees'
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -48,6 +49,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/employees" element={<Employees />} />
                   <Route path="/suppliers" element={<Suppliers />} />
                   <Route path="/raw-materials" element={<RawMaterials />} />
                   <Route path="/batches" element={<Batches />} />

@@ -15,7 +15,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   const isQA = user?.role === 'qa-worker'
 
   const menuItems = [
-    ...(isAdmin ? [{ path: '/', icon: LayoutDashboard, label: 'Dashboard' }] : []),
+    ...(isAdmin ? [
+      { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      { path: '/employees', icon: Users, label: 'Employees' },
+      { type: 'separator' }
+    ] : []),
     ...(!isQA ? [
       { path: '/suppliers', icon: Users, label: 'Suppliers' },
       { path: '/raw-materials', icon: Package, label: 'Raw Materials' },
@@ -58,7 +62,15 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
         {/* Navigation Menu */}
         <nav className="p-4 space-y-2">
-          {menuItems.map((item) => {
+          {menuItems.map((item, index) => {
+            if (item.type === 'separator') {
+              return (
+                <div
+                  key={`sep-${index}`}
+                  className={`my-4 border-t border-gray-200 ${!isOpen ? 'mx-2' : ''}`}
+                />
+              )
+            }
             const Icon = item.icon
             return (
               <NavLink
