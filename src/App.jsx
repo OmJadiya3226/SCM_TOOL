@@ -1,7 +1,8 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import DashboardLayout from './components/layout/DashboardLayout'
 import Dashboard from './pages/Dashboard'
+import Analytics from './pages/Analytics'
 import Suppliers from './pages/Suppliers'
 import RawMaterials from './pages/RawMaterials'
 import Batches from './pages/Batches'
@@ -13,7 +14,7 @@ import Employees from './pages/Employees'
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading, user } = useAuth()
-  const location = window.location
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -49,6 +50,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/analytics" element={<Analytics />} />
                   <Route path="/employees" element={<Employees />} />
                   <Route path="/suppliers" element={<Suppliers />} />
                   <Route path="/raw-materials" element={<RawMaterials />} />

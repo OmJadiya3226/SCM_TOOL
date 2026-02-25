@@ -31,10 +31,6 @@ const Batches = () => {
       value: '',
       unit: 'kg',
     },
-    quantity: {
-      value: '',
-      unit: 'kg',
-    },
     notes: '',
     approvalStatus: 'Pending',
   })
@@ -165,10 +161,6 @@ const Batches = () => {
       buyer: '',
       contents: '',
       status: 'Active',
-      quantity: {
-        value: '',
-        unit: 'kg',
-      },
       quantity: {
         value: '',
         unit: 'kg',
@@ -431,7 +423,9 @@ const Batches = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {typeof batch.rawMaterial === 'object' ? batch.rawMaterial.name : batch.rawMaterial}
+                        {typeof batch.rawMaterial === 'object' && batch.rawMaterial
+                          ? batch.rawMaterial.name
+                          : batch.rawMaterial || 'N/A'}
                       </div>
                       <div className="text-xs text-gray-500">{batch.contents}</div>
                     </td>

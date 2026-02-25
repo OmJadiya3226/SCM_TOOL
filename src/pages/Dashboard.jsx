@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { Package, Users, Layers, AlertTriangle } from 'lucide-react'
 import { dashboardAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
-import DashboardCharts from '../components/dashboard/DashboardCharts'
 
 const Dashboard = () => {
   const { user } = useAuth()
@@ -36,14 +35,16 @@ const Dashboard = () => {
   ])
   const [recentBatches, setRecentBatches] = useState([])
   const [supplierAlerts, setSupplierAlerts] = useState([])
-  const [chartData, setChartData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [chartLoading, setChartLoading] = useState(true)
 
   useEffect(() => {
     // Redirect if not admin
     if (user && user.role !== 'admin') {
-      navigate('/suppliers')
+      if (user.role === 'qa-worker') {
+        navigate('/batches')
+      } else {
+        navigate('/suppliers')
+      }
       return
     }
 
@@ -56,11 +57,10 @@ const Dashboard = () => {
     try {
       setLoading(true)
       // Try to fetch admin stats, but handle errors gracefully for non-admin users
-      const [statsData, batchesData, alertsData, chartDataRes] = await Promise.allSettled([
+      const [statsData, batchesData, alertsData] = await Promise.allSettled([
         dashboardAPI.getStats(),
         dashboardAPI.getRecentBatches(),
         dashboardAPI.getSupplierAlerts(),
-        dashboardAPI.getChartData(),
       ])
 
       // Handle stats data (admin only)
@@ -102,15 +102,10 @@ const Dashboard = () => {
       if (alertsData.status === 'fulfilled') {
         setSupplierAlerts(alertsData.value)
       }
-      // Handle chart data (admin only)
-      if (chartDataRes.status === 'fulfilled') {
-        setChartData(chartDataRes.value)
-      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
       setLoading(false)
-      setChartLoading(false)
     }
   }
 
@@ -123,8 +118,8 @@ const Dashboard = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">Welcome to your Supply Chain Management dashboard</p>
+        <h1 className="text-3xl font-bold text-gray-900">Overview</h1>
+        <p className="mt-2 text-gray-600">Welcome to your Supply Chain Management overview</p>
       </div>
 
       {/* Stats Grid */}
@@ -200,17 +195,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Visual Analytics */}
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Visual Analytics</h2>
-        {chartLoading ? (
-          <div className="flex justify-center items-center h-64 bg-white rounded-lg border border-gray-200">
-            <div className="animate-pulse text-gray-400">Loading visual analytics...</div>
-          </div>
-        ) : (
-          <DashboardCharts data={chartData} />
-        )}
-      </div>
     </div>
   )
 }

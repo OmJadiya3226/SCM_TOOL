@@ -4,6 +4,7 @@ import {
   Users,
   Package,
   Layers,
+  BarChart,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
@@ -16,7 +17,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
   const menuItems = [
     ...(isAdmin ? [
-      { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      { path: '/', icon: LayoutDashboard, label: 'Overview' },
+      { path: '/analytics', icon: BarChart, label: 'Analytics' },
       { path: '/employees', icon: Users, label: 'Employees' },
       { type: 'separator' }
     ] : []),
