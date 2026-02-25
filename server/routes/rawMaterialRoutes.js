@@ -1,5 +1,6 @@
 import express from 'express';
 import RawMaterial from '../models/RawMaterial.js';
+import Batch from '../models/Batch.js';
 import { protect, admin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -97,11 +98,22 @@ router.put('/:id', protect, admin, async (req, res) => {
 // @access  Private
 router.delete('/:id', protect, async (req, res) => {
   try {
-    const material = await RawMaterial.findByIdAndDelete(req.params.id);
+    const material = await RawMaterial.findById(req.params.id);
 
     if (!material) {
       return res.status(404).json({ message: 'Raw material not found' });
     }
+
+    // Check if material is referenced in batches
+    const batchesUsingMaterial = await Batch.countDocuments({ rawMaterial: req.params.id });
+
+    if (batchesUsingMaterial > 0) {
+      return res.status(400).json({
+        message: `Cannot delete raw material. It is currently used in ${batchesUsingMaterial} batch(es). Please remove or update these references first.`
+      });
+    }
+
+    await RawMaterial.findByIdAndDelete(req.params.id);
 
     res.json({ message: 'Raw material deleted successfully' });
   } catch (error) {
