@@ -11,6 +11,7 @@ const Employees = () => {
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [roleFilter, setRoleFilter] = useState('')
+    const [statusFilter, setStatusFilter] = useState('')
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [isOverlayOpen, setIsOverlayOpen] = useState(false)
     const [formData, setFormData] = useState({
@@ -28,7 +29,7 @@ const Employees = () => {
         if (isAdmin) {
             fetchEmployees()
         }
-    }, [searchTerm, roleFilter])
+    }, [searchTerm, roleFilter, statusFilter])
 
     const fetchEmployees = async () => {
         try {
@@ -36,6 +37,7 @@ const Employees = () => {
             const params = {}
             if (searchTerm) params.search = searchTerm
             if (roleFilter && roleFilter !== 'all') params.role = roleFilter
+            if (statusFilter !== '') params.isActive = statusFilter === 'active'
 
             const data = await usersAPI.getAll(params)
             setEmployees(data)
@@ -165,9 +167,22 @@ const Employees = () => {
                                             <option value="qa-worker">QA Worker</option>
                                         </select>
                                     </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                        <select
+                                            value={statusFilter}
+                                            onChange={(e) => setStatusFilter(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        >
+                                            <option value="">All Statuses</option>
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                    </div>
                                     <button
                                         onClick={() => {
                                             setRoleFilter('')
+                                            setStatusFilter('')
                                             setIsFilterOpen(false)
                                         }}
                                         className="w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"

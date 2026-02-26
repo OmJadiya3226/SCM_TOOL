@@ -25,6 +25,11 @@ router.get('/', protect, admin, async (req, res) => {
             query.role = role;
         }
 
+        // Filter by active status
+        if (req.query.isActive !== undefined) {
+            query.isActive = req.query.isActive === 'true';
+        }
+
         // Exclude current admin from the list maybe? Or just show all.
         // User requested "view list of all employee accounts".
         const users = await User.find(query).sort({ createdAt: -1 });
