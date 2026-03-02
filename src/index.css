@@ -12,8 +12,14 @@
   .sidebar-link {
     @apply flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-colors duration-200;
   }
-  
+
   .sidebar-link.active {
     @apply bg-primary-100 text-primary-700 font-semibold;
+  }
+
+  .sidebar-pattern {
+    background-color: #ffffff;
+    background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+    background-size: 24px 24px;
   }
 }

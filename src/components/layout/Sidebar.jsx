@@ -41,7 +41,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-white border-r border-gray-200 z-50 transition-all duration-300 ${isOpen ? 'w-64' : 'w-20'
+        className={`fixed top-0 left-0 h-full border-r border-gray-200 z-50 transition-all duration-300 sidebar-pattern ${isOpen ? 'w-64' : 'w-20'
           }`}
       >
         {/* Logo Section */}
