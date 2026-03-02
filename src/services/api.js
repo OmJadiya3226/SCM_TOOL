@@ -141,3 +141,13 @@ export const dashboardAPI = {
   getSupplierAlerts: () => apiRequest('/dashboard/supplier-alerts'),
   getChartData: () => apiRequest('/dashboard/chart-data'),
 };
+
+// Settings API
+export const settingsAPI = {
+  getRegistrationSecrets: () => apiRequest('/settings/registration-secrets'),
+  updateRegistrationSecrets: (data) => apiRequest('/settings/registration-secrets', {
+    method: 'PUT',
+    body: data,
+  }),
+};
+

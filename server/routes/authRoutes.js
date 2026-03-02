@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import SystemSetting from '../models/SystemSetting.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -24,17 +25,21 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
-    // Determine role and validate secret password
+    // Determine role and set setting key
     let userRole = 'user'; // Default to user
-    let requiredSecret = process.env.USER_SECRET_PASSWORD;
+    let settingKey = 'USER_SECRET_PASSWORD';
 
     if (role === 'admin') {
       userRole = 'admin';
-      requiredSecret = process.env.ADMIN_SECRET_PASSWORD;
+      settingKey = 'ADMIN_SECRET_PASSWORD';
     } else if (role === 'qa-worker') {
       userRole = 'qa-worker';
-      requiredSecret = process.env.QA_SECRET_PASSWORD;
+      settingKey = 'QA_SECRET_PASSWORD';
     }
+
+    // Fetch secret from database or fallback to .env
+    const setting = await SystemSetting.findOne({ key: settingKey });
+    const requiredSecret = setting ? setting.value : process.env[settingKey];
 
     // Verify secret password
     if (secretPassword !== requiredSecret) {

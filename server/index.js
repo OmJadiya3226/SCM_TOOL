@@ -8,6 +8,7 @@ import batchRoutes from './routes/batchRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import settingRoutes from './routes/settingRoutes.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/raw-materials', rawMaterialRoutes);
 app.use('/api/batches', batchRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/settings', settingRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

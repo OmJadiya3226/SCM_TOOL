@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Search, Filter, X, User } from 'lucide-react'
-import { usersAPI } from '../services/api'
+import { Search, Filter, X, User, ShieldCheck, Save } from 'lucide-react'
+import { usersAPI, settingsAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/common/Modal'
 
@@ -25,11 +25,46 @@ const Employees = () => {
     const [viewingEmployee, setViewingEmployee] = useState(null)
     const [editingEmployee, setEditingEmployee] = useState(null)
 
+    const [registrationSecrets, setRegistrationSecrets] = useState({
+        USER_SECRET_PASSWORD: '',
+        ADMIN_SECRET_PASSWORD: '',
+        QA_SECRET_PASSWORD: '',
+    })
+    const [loadingSecrets, setLoadingSecrets] = useState(false)
+    const [savingSecrets, setSavingSecrets] = useState(false)
+
     useEffect(() => {
         if (isAdmin) {
             fetchEmployees()
+            fetchRegistrationSecrets()
         }
     }, [searchTerm, roleFilter, statusFilter])
+
+    const fetchRegistrationSecrets = async () => {
+        try {
+            setLoadingSecrets(true)
+            const data = await settingsAPI.getRegistrationSecrets()
+            setRegistrationSecrets(data)
+        } catch (error) {
+            console.error('Error fetching registration secrets:', error)
+        } finally {
+            setLoadingSecrets(false)
+        }
+    }
+
+    const handleSaveSecrets = async (e) => {
+        e.preventDefault()
+        try {
+            setSavingSecrets(true)
+            await settingsAPI.updateRegistrationSecrets(registrationSecrets)
+            alert('Registration secrets updated successfully')
+        } catch (error) {
+            console.error('Error updating registration secrets:', error)
+            alert(error.message || 'Failed to update registration secrets')
+        } finally {
+            setSavingSecrets(false)
+        }
+    }
 
     const fetchEmployees = async () => {
         try {
@@ -437,6 +472,70 @@ const Employees = () => {
                         </div>
                     </div>
                 </Modal>
+            )}
+
+            {/* Registration Secrets Management (Admin Only) */}
+            {isAdmin && (
+                <div className="mt-12 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                        <div className="flex items-center">
+                            <ShieldCheck className="w-6 h-6 text-primary-600 mr-2" />
+                            <h2 className="text-xl font-bold text-gray-900">Registration Secret Passwords</h2>
+                        </div>
+                        <p className="text-sm text-gray-500 italic">These passwords are required for any user to create an account on the register page.</p>
+                    </div>
+                    <form onSubmit={handleSaveSecrets} className="p-6">
+                        {loadingSecrets ? (
+                            <div className="text-center py-4 text-gray-500">Loading secrets...</div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">User Secret</label>
+                                    <input
+                                        type="text"
+                                        value={registrationSecrets.USER_SECRET_PASSWORD}
+                                        onChange={(e) => setRegistrationSecrets({ ...registrationSecrets, USER_SECRET_PASSWORD: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none font-mono"
+                                        placeholder="user_secret"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Admin Secret</label>
+                                    <input
+                                        type="text"
+                                        value={registrationSecrets.ADMIN_SECRET_PASSWORD}
+                                        onChange={(e) => setRegistrationSecrets({ ...registrationSecrets, ADMIN_SECRET_PASSWORD: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none font-mono"
+                                        placeholder="admin_secret"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">QA Worker Secret</label>
+                                    <input
+                                        type="text"
+                                        value={registrationSecrets.QA_SECRET_PASSWORD}
+                                        onChange={(e) => setRegistrationSecrets({ ...registrationSecrets, QA_SECRET_PASSWORD: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none font-mono"
+                                        placeholder="qa_secret"
+                                        required
+                                    />
+                                </div>
+                                <div className="md:col-span-3 flex justify-end mt-2">
+                                    <button
+                                        type="submit"
+                                        disabled={savingSecrets}
+                                        className="flex items-center px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                                    >
+                                        <Save className="w-5 h-5 mr-2" />
+                                        {savingSecrets ? 'Saving...' : 'Save Registration Secrets'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </form>
+                </div>
             )}
         </div>
     )
