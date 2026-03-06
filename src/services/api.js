@@ -10,13 +10,13 @@ const apiRequest = async (endpoint, options = {}) => {
   const token = getToken();
   const config = {
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token && { Authorization: `Bearer ${token}` }),
     },
     ...options,
   };
 
-  if (options.body && typeof options.body === 'object') {
+  if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
     config.body = JSON.stringify(options.body);
   }
 
@@ -71,6 +71,10 @@ export const suppliersAPI = {
   }),
   delete: (id) => apiRequest(`/suppliers/${id}`, {
     method: 'DELETE',
+  }),
+  uploadCertification: (formData) => apiRequest('/suppliers/upload-certification', {
+    method: 'POST',
+    body: formData,
   }),
 };
 

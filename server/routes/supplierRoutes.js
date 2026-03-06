@@ -2,9 +2,51 @@ import express from 'express';
 import Supplier from '../models/Supplier.js';
 import RawMaterial from '../models/RawMaterial.js';
 import Batch from '../models/Batch.js';
+import multer from 'multer';
+import path from 'path';
 import { protect, admin } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'server/uploads/certifications/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed!'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
+
+// @route   POST /api/suppliers/upload-certification
+// @desc    Upload certification PDF
+// @access  Private/Admin
+router.post('/upload-certification', protect, admin, upload.single('certification'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Please upload a file' });
+    }
+    const fileUrl = `/uploads/certifications/${req.file.filename}`;
+    res.json({ fileUrl });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // @route   GET /api/suppliers
 // @desc    Get all suppliers

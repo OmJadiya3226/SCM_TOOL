@@ -20,6 +20,9 @@ const supplierSchema = new mongoose.Schema({
     expiryDate: {
       type: Date,
     },
+    fileUrl: {
+      type: String,
+    },
   }],
   qualityIssues: [{
     description: {

@@ -33,6 +33,8 @@ const Suppliers = () => {
   })
   const [certificationInput, setCertificationInput] = useState('')
   const [certificationExpiry, setCertificationExpiry] = useState('')
+  const [certificationFile, setCertificationFile] = useState(null)
+  const [uploadingFile, setUploadingFile] = useState(false)
   const [qualityIssueInput, setQualityIssueInput] = useState('')
   const [qualityIssueDate, setQualityIssueDate] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -61,11 +63,30 @@ const Suppliers = () => {
     }
   }
 
-  const handleAddCertification = () => {
+  const handleAddCertification = async () => {
     if (certificationInput.trim()) {
+      let fileUrl = undefined
+      if (certificationFile) {
+        try {
+          setUploadingFile(true)
+          const formDataObj = new FormData()
+          formDataObj.append('certification', certificationFile)
+          const response = await suppliersAPI.uploadCertification(formDataObj)
+          fileUrl = response.fileUrl
+        } catch (error) {
+          console.error('Error uploading certification:', error)
+          alert('Failed to upload certification PDF')
+          setUploadingFile(false)
+          return
+        } finally {
+          setUploadingFile(false)
+        }
+      }
+
       const newCert = {
         name: certificationInput.trim(),
         expiryDate: certificationExpiry || undefined,
+        fileUrl: fileUrl,
       }
       setFormData({
         ...formData,
@@ -73,6 +94,10 @@ const Suppliers = () => {
       })
       setCertificationInput('')
       setCertificationExpiry('')
+      setCertificationFile(null)
+      // Reset file input manually
+      const fileInput = document.getElementById('certFile')
+      if (fileInput) fileInput.value = ''
     }
   }
 
@@ -411,14 +436,29 @@ const Suppliers = () => {
                         {supplier.certifications && supplier.certifications.length > 0 ? (
                           supplier.certifications.map((cert, idx) => {
                             const certName = typeof cert === 'string' ? cert : cert.name
+                            const fileUrl = typeof cert === 'object' ? cert.fileUrl : null
                             return (
-                              <span
-                                key={idx}
-                                className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
-                                title={typeof cert === 'object' && cert.expiryDate ? `Expires: ${new Date(cert.expiryDate).toLocaleDateString()}` : ''}
-                              >
-                                {certName}
-                              </span>
+                              <div key={idx} className="flex items-center gap-1">
+                                <span
+                                  className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
+                                  title={typeof cert === 'object' && cert.expiryDate ? `Expires: ${new Date(cert.expiryDate).toLocaleDateString()}` : ''}
+                                >
+                                  {certName}
+                                </span>
+                                {fileUrl && (
+                                  <a
+                                    href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${fileUrl}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary-600 hover:text-primary-800"
+                                    title="Download Certificate"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                  </a>
+                                )}
+                              </div>
                             )
                           })
                         ) : (
@@ -475,7 +515,7 @@ const Suppliers = () => {
       {isOverlayOpen && (
         <Modal>
           <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900">
                   {editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}
@@ -534,32 +574,44 @@ const Suppliers = () => {
                       type="date"
                       value={certificationExpiry}
                       onChange={(e) => setCertificationExpiry(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Expiry date (optional)"
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    />
+                    <input
+                      type="file"
+                      id="certFile"
+                      accept=".pdf"
+                      onChange={(e) => setCertificationFile(e.target.files[0])}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
                     />
                     <button
                       type="button"
+                      disabled={uploadingFile}
                       onClick={handleAddCertification}
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
                     >
-                      Add
+                      {uploadingFile ? 'Uploading...' : 'Add'}
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {formData.certifications.map((cert, index) => {
                       const certName = typeof cert === 'string' ? cert : cert.name
                       const certExpiry = typeof cert === 'object' ? cert.expiryDate : null
+                      const fileUrl = typeof cert === 'object' ? cert.fileUrl : null
                       return (
-                        <span
+                        <div
                           key={index}
                           className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-2"
-                          title={certExpiry ? `Expires: ${new Date(certExpiry).toLocaleDateString()}` : ''}
                         >
-                          {certName}
-                          {certExpiry && (
-                            <span className="text-xs text-blue-600">
-                              ({new Date(certExpiry).toLocaleDateString()})
-                            </span>
+                          <div className="flex flex-col">
+                            <span className="font-semibold">{certName}</span>
+                            {certExpiry && (
+                              <span className="text-[10px] text-blue-600">
+                                Expires: {new Date(certExpiry).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          {fileUrl && (
+                            <span className="text-[10px] bg-blue-200 px-1 rounded">PDF</span>
                           )}
                           <button
                             type="button"
@@ -568,7 +620,7 @@ const Suppliers = () => {
                           >
                             <X className="w-4 h-4" />
                           </button>
-                        </span>
+                        </div>
                       )
                     })}
                   </div>
@@ -765,7 +817,7 @@ const Suppliers = () => {
       {viewingSupplier && (
         <Modal>
           <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900">Supplier Details</h2>
                 <button
@@ -798,15 +850,32 @@ const Suppliers = () => {
                       {viewingSupplier.certifications.map((cert, idx) => {
                         const certName = typeof cert === 'string' ? cert : cert.name
                         const certExpiry = typeof cert === 'object' ? cert.expiryDate : null
+                        const fileUrl = typeof cert === 'object' ? cert.fileUrl : null
                         return (
-                          <div key={idx} className="flex flex-col">
-                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
-                              {certName}
-                            </span>
-                            {certExpiry && (
-                              <span className="text-xs text-gray-500 mt-1">
-                                Expires: {new Date(certExpiry).toLocaleDateString()}
-                              </span>
+                          <div
+                            key={idx}
+                            className="px-3 py-2 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100 flex items-center gap-3"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-semibold">{certName}</span>
+                              {certExpiry && (
+                                <span className="text-xs text-blue-600">
+                                  Expires: {new Date(certExpiry).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                            {fileUrl && (
+                              <a
+                                href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${fileUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                PDF
+                              </a>
                             )}
                           </div>
                         )
