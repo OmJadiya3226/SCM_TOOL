@@ -7,16 +7,30 @@ const batchSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
-  rawMaterial: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'RawMaterial',
-    required: [true, 'At least one raw material is required'],
-  }],
-  source: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Supplier',
-    required: [true, 'At least one source supplier is required'],
-  }],
+  rawMaterial: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'RawMaterial',
+    }],
+    validate: {
+      validator: function (v) {
+        return Array.isArray(v) && v.length > 0;
+      },
+      message: 'At least one raw material is required'
+    }
+  },
+  source: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Supplier',
+    }],
+    validate: {
+      validator: function (v) {
+        return Array.isArray(v) && v.length > 0;
+      },
+      message: 'At least one source supplier is required'
+    }
+  },
   productionDate: {
     type: Date,
     required: [true, 'Production date is required'],

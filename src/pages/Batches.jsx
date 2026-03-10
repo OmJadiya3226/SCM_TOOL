@@ -85,6 +85,14 @@ const Batches = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      if (formData.rawMaterial.length === 0) {
+        alert('Please add at least one raw material');
+        return;
+      }
+      if (formData.source.length === 0) {
+        alert('Please add at least one source supplier');
+        return;
+      }
       setSubmitting(true)
 
       // If QA worker, only update notes and approval status
@@ -231,6 +239,14 @@ const Batches = () => {
     }
     e.preventDefault()
     try {
+      if (formData.rawMaterial.length === 0) {
+        alert('Please add at least one raw material');
+        return;
+      }
+      if (formData.source.length === 0) {
+        alert('Please add at least one source supplier');
+        return;
+      }
       setSubmitting(true)
       const submitData = {
         ...formData,
