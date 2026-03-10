@@ -12,9 +12,11 @@ import {
     X
 } from 'lucide-react'
 import { suppliersAPI, rawMaterialsAPI, batchesAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import Modal from '../components/common/Modal'
 
 const SCMOverview = () => {
+    const { user } = useAuth()
     const [loading, setLoading] = useState(true)
     const [data, setData] = useState({
         suppliers: [],
@@ -152,6 +154,17 @@ const SCMOverview = () => {
             console.error(`Error fetching ${type} details:`, error)
             alert(`Failed to load ${type} details`)
         }
+    }
+
+    if (user?.role === 'qa-worker') {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-900">Access Denied</h2>
+                    <p className="mt-2 text-gray-600">You do not have permission to view this page.</p>
+                </div>
+            </div>
+        )
     }
 
     if (loading) {

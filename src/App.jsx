@@ -29,10 +29,8 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />
   }
 
-  // Redirect QA worker to /batches if trying to access dashboard/root
-  if (user?.role === 'qa-worker' && (['/', '/dashboard', '/scm-overview'].includes(location.pathname))) {
-    return <Navigate to="/batches" replace />
-  }
+  // No redirects for QA workers here anymore, we use inlined Access Denied pages
+
 
   return children
 }

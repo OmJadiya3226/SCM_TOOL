@@ -12,16 +12,10 @@ const Analytics = () => {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // Redirect if not admin
-        if (user && user.role !== 'admin') {
-            navigate('/batches')
-            return
-        }
-
         if (user?.role === 'admin') {
             fetchAnalyticsData()
         }
-    }, [user, navigate])
+    }, [user])
 
     const fetchAnalyticsData = async () => {
         try {
@@ -36,7 +30,14 @@ const Analytics = () => {
     }
 
     if (!user || user.role !== 'admin') {
-        return null
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-900">Access Denied</h2>
+                    <p className="mt-2 text-gray-600">You do not have permission to view this page.</p>
+                </div>
+            </div>
+        )
     }
 
     return (
