@@ -6,7 +6,8 @@ import {
   Layers,
   BarChart,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  GitBranch
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
@@ -27,6 +28,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       { path: '/raw-materials', icon: Package, label: 'Raw Materials' },
     ] : []),
     { path: '/batches', icon: Layers, label: 'Batches' },
+    { path: '/scm-overview', icon: GitBranch, label: 'SCM Overview' },
   ]
 
   return (
