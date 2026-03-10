@@ -30,7 +30,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   // Redirect QA worker to /batches if trying to access dashboard/root
-  if (user?.role === 'qa-worker' && (location.pathname === '/' || location.pathname === '/dashboard')) {
+  if (user?.role === 'qa-worker' && (['/', '/dashboard', '/scm-overview'].includes(location.pathname))) {
     return <Navigate to="/batches" replace />
   }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BarChart } from 'lucide-react'
 import { dashboardAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import DashboardCharts from '../components/dashboard/DashboardCharts'
@@ -42,7 +43,10 @@ const Analytics = () => {
         <div className="space-y-6">
             {/* Page Header */}
             <div>
-                <h1 className="text-3xl font-bold text-gray-900">Visual Analytics</h1>
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                    <BarChart className="w-8 h-8 text-primary-600" />
+                    Visual Analytics
+                </h1>
                 <p className="mt-2 text-gray-600">Deep dive into your supply chain performance and metrics</p>
             </div>
 

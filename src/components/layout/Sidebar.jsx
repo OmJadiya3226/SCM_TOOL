@@ -28,7 +28,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       { path: '/raw-materials', icon: Package, label: 'Raw Materials' },
     ] : []),
     { path: '/batches', icon: Layers, label: 'Batches' },
-    { path: '/scm-overview', icon: GitBranch, label: 'SCM Overview' },
+    ...(!isQA ? [
+      { path: '/scm-overview', icon: GitBranch, label: 'SCM Overview' },
+    ] : []),
   ]
 
   return (
@@ -97,7 +99,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         {isOpen && (
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
             <p className="text-xs text-gray-500 text-center">
-              SCM System v1.0.0
+              SCM System v1.0
             </p>
           </div>
         )}

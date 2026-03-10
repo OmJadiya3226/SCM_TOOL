@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Package, Users, Layers, AlertTriangle } from 'lucide-react'
+import { Package, Users, Layers, AlertTriangle, LayoutDashboard } from 'lucide-react'
 import { dashboardAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
@@ -118,7 +118,10 @@ const Dashboard = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Overview</h1>
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <LayoutDashboard className="w-8 h-8 text-primary-600" />
+          Overview
+        </h1>
         <p className="mt-2 text-gray-600">Welcome to your Supply Chain Management overview</p>
       </div>
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Lock, Trash2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Lock, Trash2, AlertTriangle, Settings } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { authAPI } from '../services/api'
 
@@ -79,7 +79,10 @@ const Account = () => {
                     <ArrowLeft className="w-5 h-5 mr-2" />
                     Back to Dashboard
                 </button>
-                <h1 className="text-3xl font-bold text-gray-900">Account Management</h1>
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                    <Settings className="w-8 h-8 text-primary-600" />
+                    Account Management
+                </h1>
                 <p className="text-gray-600 mt-2">Manage your account settings and security</p>
             </div>
 

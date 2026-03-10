@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Filter, X, User, ShieldCheck, Save } from 'lucide-react'
+import { Search, Filter, X, User, ShieldCheck, Save, Users } from 'lucide-react'
 import { usersAPI, settingsAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/common/Modal'
@@ -159,7 +159,10 @@ const Employees = () => {
             {/* Page Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Employee Management</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                        <Users className="w-8 h-8 text-primary-600" />
+                        Employee Management
+                    </h1>
                     <p className="mt-2 text-gray-600">Manage user accounts, roles, and access levels</p>
                 </div>
             </div>

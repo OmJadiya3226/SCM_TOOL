@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, X } from 'lucide-react'
+import { Plus, Search, Filter, X, Layers } from 'lucide-react'
 import { batchesAPI, suppliersAPI, rawMaterialsAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/common/Modal'
@@ -288,7 +288,10 @@ const Batches = () => {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Batches</h1>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <Layers className="w-8 h-8 text-primary-600" />
+            Batches
+          </h1>
           <p className="mt-2 text-gray-600">Track batch data including source, production date, buyer, and contents</p>
         </div>
         {!isQA && (
