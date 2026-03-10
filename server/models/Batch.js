@@ -7,16 +7,16 @@ const batchSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
-  rawMaterial: {
+  rawMaterial: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'RawMaterial',
-    required: [true, 'Raw material is required'],
-  },
-  source: {
+    required: [true, 'At least one raw material is required'],
+  }],
+  source: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Supplier',
-    required: [true, 'Source supplier is required'],
-  },
+    required: [true, 'At least one source supplier is required'],
+  }],
   productionDate: {
     type: Date,
     required: [true, 'Production date is required'],

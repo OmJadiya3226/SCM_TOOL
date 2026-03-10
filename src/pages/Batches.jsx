@@ -20,8 +20,8 @@ const Batches = () => {
   const [rawMaterials, setRawMaterials] = useState([])
   const [formData, setFormData] = useState({
     batchNumber: '',
-    rawMaterial: '',
-    source: '',
+    rawMaterial: [],
+    source: [],
     productionDate: '',
     acquisitionDate: '',
     buyer: '',
@@ -127,8 +127,8 @@ const Batches = () => {
       setIsOverlayOpen(false)
       setFormData({
         batchNumber: '',
-        rawMaterial: '',
-        source: '',
+        rawMaterial: [],
+        source: [],
         productionDate: '',
         acquisitionDate: '',
         buyer: '',
@@ -154,8 +154,8 @@ const Batches = () => {
     setEditingBatch(null)
     setFormData({
       batchNumber: '',
-      rawMaterial: '',
-      source: '',
+      rawMaterial: [],
+      source: [],
       productionDate: '',
       acquisitionDate: '',
       buyer: '',
@@ -186,12 +186,12 @@ const Batches = () => {
       setEditingBatch(batch)
       setFormData({
         batchNumber: batch.batchNumber || '',
-        rawMaterial: (typeof batch.rawMaterial === 'object' && batch.rawMaterial)
-          ? batch.rawMaterial._id
-          : batch.rawMaterial || '',
-        source: (typeof batch.source === 'object' && batch.source)
-          ? batch.source._id
-          : batch.source || '',
+        rawMaterial: Array.isArray(batch.rawMaterial)
+          ? batch.rawMaterial.map(rm => (typeof rm === 'object' ? rm._id : rm))
+          : [typeof batch.rawMaterial === 'object' ? batch.rawMaterial?._id : batch.rawMaterial].filter(Boolean),
+        source: Array.isArray(batch.source)
+          ? batch.source.map(s => (typeof s === 'object' ? s._id : s))
+          : [typeof batch.source === 'object' ? batch.source?._id : batch.source].filter(Boolean),
         productionDate: batch.productionDate ? new Date(batch.productionDate).toISOString().split('T')[0] : '',
         acquisitionDate: batch.acquisitionDate ? new Date(batch.acquisitionDate).toISOString().split('T')[0] : '',
         buyer: batch.buyer || '',
@@ -245,8 +245,8 @@ const Batches = () => {
       setEditingBatch(null)
       setFormData({
         batchNumber: '',
-        rawMaterial: '',
-        source: '',
+        rawMaterial: [],
+        source: [],
         productionDate: '',
         acquisitionDate: '',
         buyer: '',
@@ -421,19 +421,19 @@ const Batches = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{batch.batchNumber}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">
-                        {typeof batch.rawMaterial === 'object' && batch.rawMaterial
-                          ? batch.rawMaterial.name
-                          : batch.rawMaterial || 'N/A'}
+                        {Array.isArray(batch.rawMaterial)
+                          ? batch.rawMaterial.map(rm => rm.name).join(', ')
+                          : (typeof batch.rawMaterial === 'object' ? batch.rawMaterial?.name : (batch.rawMaterial || 'N/A'))}
                       </div>
                       <div className="text-xs text-gray-500">{batch.contents}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {typeof batch.source === 'object' && batch.source
-                          ? batch.source.name
-                          : batch.source || 'N/A'}
+                        {Array.isArray(batch.source)
+                          ? batch.source.map(s => s.name).join(', ')
+                          : (typeof batch.source === 'object' ? batch.source?.name : (batch.source || 'N/A'))}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -546,44 +546,98 @@ const Batches = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Raw Material <span className="text-red-500">*</span>
+                        Raw Materials <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
-                        disabled={isQA}
-                        value={formData.rawMaterial}
-                        onChange={(e) => setFormData({ ...formData, rawMaterial: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      >
-                        <option value="">Select raw material</option>
-                        {rawMaterials.map((material) => (
-                          <option key={material._id} value={material._id}>
-                            {material.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="space-y-2">
+                        <select
+                          disabled={isQA}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val && !formData.rawMaterial.includes(val)) {
+                              setFormData({ ...formData, rawMaterial: [...formData.rawMaterial, val] });
+                            }
+                            e.target.value = '';
+                          }}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                          <option value="">Add raw material...</option>
+                          {rawMaterials
+                            .filter(m => !formData.rawMaterial.includes(m._id))
+                            .map((material) => (
+                              <option key={material._id} value={material._id}>
+                                {material.name}
+                              </option>
+                            ))}
+                        </select>
+                        <div className="flex flex-wrap gap-2">
+                          {formData.rawMaterial.map((id) => {
+                            const mat = rawMaterials.find(m => m._id === id);
+                            return mat ? (
+                              <span key={id} className="inline-flex items-center gap-1 px-2 py-1 bg-primary-50 text-primary-700 rounded text-xs font-medium border border-primary-100">
+                                {mat.name}
+                                {!isQA && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, rawMaterial: formData.rawMaterial.filter(rid => rid !== id) })}
+                                    className="hover:text-primary-900"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Source Supplier <span className="text-red-500">*</span>
+                        Source Suppliers <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
-                        disabled={isQA}
-                        value={formData.source}
-                        onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      >
-                        <option value="">Select supplier</option>
-                        {suppliers.map((supplier) => (
-                          <option key={supplier._id} value={supplier._id}>
-                            {supplier.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="space-y-2">
+                        <select
+                          disabled={isQA}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val && !formData.source.includes(val)) {
+                              setFormData({ ...formData, source: [...formData.source, val] });
+                            }
+                            e.target.value = '';
+                          }}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                          <option value="">Add supplier...</option>
+                          {suppliers
+                            .filter(s => !formData.source.includes(s._id))
+                            .map((supplier) => (
+                              <option key={supplier._id} value={supplier._id}>
+                                {supplier.name}
+                              </option>
+                            ))}
+                        </select>
+                        <div className="flex flex-wrap gap-2">
+                          {formData.source.map((id) => {
+                            const sup = suppliers.find(s => s._id === id);
+                            return sup ? (
+                              <span key={id} className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-medium border border-green-100">
+                                {sup.name}
+                                {!isQA && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, source: formData.source.filter(sid => sid !== id) })}
+                                    className="hover:text-green-900"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -779,18 +833,28 @@ const Batches = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Raw Material</label>
-                      <p className="mt-1 text-gray-900">
-                        {typeof viewingBatch.rawMaterial === 'object' ? viewingBatch.rawMaterial.name : viewingBatch.rawMaterial}
-                      </p>
+                      <label className="block text-sm font-medium text-gray-700">Raw Materials</label>
+                      <ul className="mt-1 list-disc list-inside text-gray-900">
+                        {Array.isArray(viewingBatch.rawMaterial) ? (
+                          viewingBatch.rawMaterial.map((rm, idx) => (
+                            <li key={idx}>{typeof rm === 'object' ? rm.name : rm}</li>
+                          ))
+                        ) : (
+                          <li>{typeof viewingBatch.rawMaterial === 'object' ? viewingBatch.rawMaterial.name : viewingBatch.rawMaterial}</li>
+                        )}
+                      </ul>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Source Supplier</label>
-                      <p className="mt-1 text-gray-900">
-                        {typeof viewingBatch.source === 'object' && viewingBatch.source
-                          ? viewingBatch.source.name
-                          : viewingBatch.source || 'N/A'}
-                      </p>
+                      <label className="block text-sm font-medium text-gray-700">Source Suppliers</label>
+                      <ul className="mt-1 list-disc list-inside text-gray-900">
+                        {Array.isArray(viewingBatch.source) ? (
+                          viewingBatch.source.map((s, idx) => (
+                            <li key={idx}>{typeof s === 'object' ? s.name : s}</li>
+                          ))
+                        ) : (
+                          <li>{typeof viewingBatch.source === 'object' ? viewingBatch.source.name : viewingBatch.source}</li>
+                        )}
+                      </ul>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
