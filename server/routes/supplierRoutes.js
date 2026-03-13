@@ -53,11 +53,15 @@ router.post('/upload-certification', protect, admin, upload.single('certificatio
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { search, status, qualityIssuesCount } = req.query;
+    const { search, status, qualityIssuesCount, certification } = req.query;
     let query = {};
 
     if (search) {
       query.name = { $regex: search, $options: 'i' };
+    }
+
+    if (certification) {
+      query['certifications.name'] = { $regex: certification, $options: 'i' };
     }
 
     if (status) {

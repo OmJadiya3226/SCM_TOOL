@@ -11,6 +11,7 @@ import Account from './pages/Account'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Employees from './pages/Employees'
+import SCMSearch from './pages/SCMSearch'
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -54,6 +55,7 @@ function App() {
                   <Route path="/suppliers" element={<Suppliers />} />
                   <Route path="/raw-materials" element={<RawMaterials />} />
                   <Route path="/batches" element={<Batches />} />
+                  <Route path="/scm-search" element={<SCMSearch />} />
                   <Route path="/scm-overview" element={<SCMOverview />} />
                   <Route path="/account" element={<Account />} />
                 </Routes>

@@ -127,7 +127,7 @@ const Dashboard = () => {
       <div>
         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
           <LayoutDashboard className="w-8 h-8 text-primary-600" />
-          Overview
+          Admin Overview
         </h1>
         <p className="mt-2 text-gray-600">Welcome to your Supply Chain Management overview</p>
       </div>
@@ -170,7 +170,7 @@ const Dashboard = () => {
                   <div>
                     <p className="font-medium text-gray-900">{batch.batchNumber}</p>
                     <p className="text-sm text-gray-500">
-                      {new Date(batch.createdAt).toLocaleDateString()} - {batch.rawMaterial?.name || 'N/A'}
+                      {new Date(batch.createdAt).toLocaleDateString()} - {batch.buyer || 'N/A'}
                     </p>
                   </div>
                   <span className="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">

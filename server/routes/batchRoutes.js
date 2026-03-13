@@ -9,7 +9,7 @@ const router = express.Router();
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { search, status, source, buyer } = req.query;
+    const { search, status, source, buyer, approvalStatus, rawMaterial } = req.query;
     let query = {};
 
     if (search) {
@@ -17,6 +17,14 @@ router.get('/', protect, async (req, res) => {
         { batchNumber: { $regex: search, $options: 'i' } },
         { buyer: { $regex: search, $options: 'i' } },
       ];
+    }
+
+    if (approvalStatus) {
+      query.approvalStatus = approvalStatus;
+    }
+
+    if (rawMaterial) {
+      query.rawMaterial = rawMaterial;
     }
 
     if (status) {

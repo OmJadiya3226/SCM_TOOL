@@ -10,11 +10,15 @@ const router = express.Router();
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { search, status, supplier, hazardClass } = req.query;
+    const { search, status, supplier, hazardClass, lotNumber } = req.query;
     let query = {};
 
     if (search) {
       query.name = { $regex: search, $options: 'i' };
+    }
+
+    if (lotNumber) {
+      query.lotNumber = { $regex: lotNumber, $options: 'i' };
     }
 
     if (status) {

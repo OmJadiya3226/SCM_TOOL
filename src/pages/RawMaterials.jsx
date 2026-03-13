@@ -13,6 +13,7 @@ const RawMaterials = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [supplierFilter, setSupplierFilter] = useState('')
   const [hazardClassFilter, setHazardClassFilter] = useState('')
+  const [lotNumberFilter, setLotNumberFilter] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isOverlayOpen, setIsOverlayOpen] = useState(false)
   const [suppliers, setSuppliers] = useState([])
@@ -40,7 +41,7 @@ const RawMaterials = () => {
     if (isOverlayOpen || isFilterOpen) {
       fetchSuppliers()
     }
-  }, [searchTerm, statusFilter, supplierFilter, hazardClassFilter, isOverlayOpen, isFilterOpen])
+  }, [searchTerm, statusFilter, supplierFilter, hazardClassFilter, lotNumberFilter, isOverlayOpen, isFilterOpen])
 
   const fetchMaterials = async () => {
     try {
@@ -50,6 +51,7 @@ const RawMaterials = () => {
       if (statusFilter) params.status = statusFilter
       if (supplierFilter) params.supplier = supplierFilter
       if (hazardClassFilter) params.hazardClass = hazardClassFilter
+      if (lotNumberFilter) params.lotNumber = lotNumberFilter
 
       const data = await rawMaterialsAPI.getAll(params)
       setMaterials(data)
@@ -309,12 +311,23 @@ const RawMaterials = () => {
                       placeholder="e.g. Class 3"
                     />
                   </div>
-                  {(statusFilter || supplierFilter || hazardClassFilter) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Lot Number</label>
+                    <input
+                      type="text"
+                      value={lotNumberFilter}
+                      onChange={(e) => setLotNumberFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Enter lot number"
+                    />
+                  </div>
+                  {(statusFilter || supplierFilter || hazardClassFilter || lotNumberFilter) && (
                     <button
                       onClick={() => {
                         setStatusFilter('')
                         setSupplierFilter('')
                         setHazardClassFilter('')
+                        setLotNumberFilter('')
                         setIsFilterOpen(false)
                       }}
                       className="w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"

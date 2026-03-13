@@ -11,6 +11,7 @@ const Suppliers = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [certificationFilter, setCertificationFilter] = useState('')
   const [qualityIssuesCountFilter, setQualityIssuesCountFilter] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isOverlayOpen, setIsOverlayOpen] = useState(false)
@@ -44,7 +45,7 @@ const Suppliers = () => {
 
   useEffect(() => {
     fetchSuppliers()
-  }, [searchTerm, statusFilter, qualityIssuesCountFilter])
+  }, [searchTerm, statusFilter, qualityIssuesCountFilter, certificationFilter])
 
   const fetchSuppliers = async () => {
     try {
@@ -52,6 +53,7 @@ const Suppliers = () => {
       const params = {}
       if (searchTerm) params.search = searchTerm
       if (statusFilter) params.status = statusFilter
+      if (certificationFilter) params.certification = certificationFilter
       if (qualityIssuesCountFilter) params.qualityIssuesCount = qualityIssuesCountFilter
 
       const data = await suppliersAPI.getAll(params)
@@ -359,6 +361,16 @@ const Suppliers = () => {
                     </select>
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Certification Name</label>
+                    <input
+                      type="text"
+                      value={certificationFilter}
+                      onChange={(e) => setCertificationFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g. ISO 9001"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Quality Issues Count</label>
                     <input
                       type="number"
@@ -369,10 +381,11 @@ const Suppliers = () => {
                       placeholder="Exact count"
                     />
                   </div>
-                  {(statusFilter || qualityIssuesCountFilter) && (
+                  {(statusFilter || qualityIssuesCountFilter || certificationFilter) && (
                     <button
                       onClick={() => {
                         setStatusFilter('')
+                        setCertificationFilter('')
                         setQualityIssuesCountFilter('')
                         setIsFilterOpen(false)
                       }}

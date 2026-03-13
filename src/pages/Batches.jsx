@@ -14,6 +14,8 @@ const Batches = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [sourceFilter, setSourceFilter] = useState('')
   const [buyerFilter, setBuyerFilter] = useState('')
+  const [materialFilter, setMaterialFilter] = useState('')
+  const [approvalFilter, setApprovalFilter] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isOverlayOpen, setIsOverlayOpen] = useState(false)
   const [suppliers, setSuppliers] = useState([])
@@ -44,7 +46,7 @@ const Batches = () => {
       fetchSuppliers()
       fetchRawMaterials()
     }
-  }, [searchTerm, statusFilter, sourceFilter, buyerFilter, isOverlayOpen, isFilterOpen])
+  }, [searchTerm, statusFilter, sourceFilter, buyerFilter, materialFilter, approvalFilter, isOverlayOpen, isFilterOpen])
 
   const fetchBatches = async () => {
     try {
@@ -54,6 +56,8 @@ const Batches = () => {
       if (statusFilter) params.status = statusFilter
       if (sourceFilter) params.source = sourceFilter
       if (buyerFilter) params.buyer = buyerFilter
+      if (materialFilter) params.rawMaterial = materialFilter
+      if (approvalFilter) params.approvalStatus = approvalFilter
 
       const data = await batchesAPI.getAll(params)
       setBatches(data)
@@ -344,6 +348,19 @@ const Batches = () => {
                     </select>
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Raw Material</label>
+                    <select
+                      value={materialFilter}
+                      onChange={(e) => setMaterialFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">All Materials</option>
+                      {rawMaterials.map(m => (
+                        <option key={m._id} value={m._id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Source Supplier</label>
                     <select
                       value={sourceFilter}
@@ -366,12 +383,27 @@ const Batches = () => {
                       placeholder="Buyer name"
                     />
                   </div>
-                  {(statusFilter || sourceFilter || buyerFilter) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Approval Status</label>
+                    <select
+                      value={approvalFilter}
+                      onChange={(e) => setApprovalFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
+                  {(statusFilter || sourceFilter || buyerFilter || materialFilter || approvalFilter) && (
                     <button
                       onClick={() => {
                         setStatusFilter('')
                         setSourceFilter('')
                         setBuyerFilter('')
+                        setMaterialFilter('')
+                        setApprovalFilter('')
                         setIsFilterOpen(false)
                       }}
                       className="w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"

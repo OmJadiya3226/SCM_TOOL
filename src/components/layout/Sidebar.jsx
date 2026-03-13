@@ -7,7 +7,8 @@ import {
   BarChart,
   ChevronLeft,
   ChevronRight,
-  GitBranch
+  GitBranch,
+  SearchCode
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
@@ -18,7 +19,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
   const menuItems = [
     ...(isAdmin ? [
-      { path: '/', icon: LayoutDashboard, label: 'Overview' },
+      { path: '/', icon: LayoutDashboard, label: 'Admin Overview' },
       { path: '/analytics', icon: BarChart, label: 'Analytics' },
       { path: '/employees', icon: Users, label: 'Employees' },
       { type: 'separator' }
@@ -29,6 +30,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     ] : []),
     { path: '/batches', icon: Layers, label: 'Batches' },
     ...(!isQA ? [
+      { type: 'separator' },
+      //{ path: '/scm-search', icon: SearchCode, label: 'SCM Search' },
       { path: '/scm-overview', icon: GitBranch, label: 'SCM Overview' },
     ] : []),
   ]
