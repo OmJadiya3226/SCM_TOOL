@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Lock, Trash2, AlertTriangle, Settings } from 'lucide-react'
+import { ArrowLeft, Lock, Trash2, AlertTriangle, Settings, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { authAPI } from '../services/api'
 
@@ -19,6 +19,15 @@ const Account = () => {
     // Account deletion state
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [deleteLoading, setDeleteLoading] = useState(false)
+
+    // 2FA state
+    const [twoFactorStatus, setTwoFactorStatus] = useState('idle')
+    const [qrCode, setQrCode] = useState('')
+    const [secret, setSecret] = useState('')
+    const [twoFactorCode, setTwoFactorCode] = useState('')
+    const [twoFactorLoading, setTwoFactorLoading] = useState(false)
+    const [twoFactorError, setTwoFactorError] = useState('')
+    const [twoFactorSuccess, setTwoFactorSuccess] = useState('')
 
     const handlePasswordChange = async (e) => {
         e.preventDefault()
@@ -70,8 +79,56 @@ const Account = () => {
 
     const { user } = useAuth()
 
+    const handleEnable2FA = async () => {
+        setTwoFactorError('')
+        setTwoFactorLoading(true)
+        try {
+            const data = await authAPI.enable2FA()
+            setSecret(data.secret)
+            setQrCode(data.qrImage)
+            setTwoFactorStatus('settingUp')
+        } catch(error) {
+            setTwoFactorError(error.message || 'Failed to generate 2FA')
+        } finally {
+            setTwoFactorLoading(false)
+        }
+    }
+
+    const handleVerify2FA = async (e) => {
+        e.preventDefault()
+        setTwoFactorError('')
+        setTwoFactorLoading(true)
+        try {
+            await authAPI.verify2FA(twoFactorCode)
+            setTwoFactorSuccess('2FA enabled successfully!')
+            setTwoFactorStatus('idle')
+            setTwoFactorCode('')
+            window.location.reload()
+        } catch(error) {
+            setTwoFactorError(error.message || 'Failed to verify 2FA')
+        } finally {
+            setTwoFactorLoading(false)
+        }
+    }
+
+    const handleDisable2FA = async (e) => {
+        e.preventDefault()
+        setTwoFactorError('')
+        setTwoFactorLoading(true)
+        try {
+            await authAPI.disable2FA(twoFactorCode)
+            setTwoFactorSuccess('2FA disabled successfully!')
+            setTwoFactorCode('')
+            window.location.reload()
+        } catch(error) {
+            setTwoFactorError(error.message || 'Failed to disable 2FA')
+        } finally {
+            setTwoFactorLoading(false)
+        }
+    }
+
     return (
-        <div className="max-w-4xl">
+        <div className="max-w-4xl mx-auto">
             {/* Header */}
             <div className="mb-6">
                 <button
@@ -155,6 +212,126 @@ const Account = () => {
                         {passwordLoading ? 'Changing Password...' : 'Change Password'}
                     </button>
                 </form>
+            </div>
+
+            {/* Two-Factor Authentication Section */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div className="flex items-center mb-4">
+                    <ShieldCheck className="w-6 h-6 text-primary-600 mr-3" />
+                    <h2 className="text-xl font-semibold text-gray-900">Two-Factor Authentication (2FA)</h2>
+                </div>
+
+                <div className="mb-4">
+                    <p className="text-gray-600">
+                        Protect your account with an extra layer of security. Once enabled, you'll need to enter a 6-digit code from your authenticator app (like Google Authenticator or Authy) when you log in.
+                    </p>
+                </div>
+
+                {twoFactorError && (
+                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm mb-4">
+                        {twoFactorError}
+                    </div>
+                )}
+                {twoFactorSuccess && (
+                    <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm mb-4">
+                        {twoFactorSuccess}
+                    </div>
+                )}
+
+                {user?.twoFactorEnabled ? (
+                    <div>
+                        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 font-medium flex items-center">
+                            <ShieldCheck className="w-5 h-5 mr-2" />
+                            2FA is currently enabled for your account.
+                        </div>
+                        <form onSubmit={handleDisable2FA} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    To disable 2FA, please enter a code from your authenticator app
+                                </label>
+                                <input
+                                    type="text"
+                                    value={twoFactorCode}
+                                    onChange={(e) => setTwoFactorCode(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    placeholder="6-digit code"
+                                    required
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={twoFactorLoading}
+                                className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-medium"
+                            >
+                                {twoFactorLoading ? 'Disabling...' : 'Disable 2FA'}
+                            </button>
+                        </form>
+                    </div>
+                ) : (
+                    <div>
+                        {twoFactorStatus === 'idle' ? (
+                            <button
+                                onClick={handleEnable2FA}
+                                disabled={twoFactorLoading}
+                                className="bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 font-medium"
+                            >
+                                {twoFactorLoading ? 'Setting up...' : 'Setup 2FA'}
+                            </button>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <h3 className="font-medium text-gray-900 mb-2">1. Scan the QR Code</h3>
+                                    <p className="text-sm text-gray-600 mb-4">Open your authenticator app and scan this QR code.</p>
+                                    <div className="bg-white p-2 inline-block rounded-lg shadow-sm">
+                                        {qrCode && <img src={qrCode} alt="2FA QR Code" className="w-48 h-48" />}
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-4">
+                                        Can't scan the QR code? You can manually enter this secret key:
+                                        <br />
+                                        <code className="bg-gray-100 border border-gray-200 px-2 py-1 rounded font-mono mt-2 inline-block font-bold">{secret}</code>
+                                    </p>
+                                </div>
+                                <form onSubmit={handleVerify2FA} className="space-y-4">
+                                    <h3 className="font-medium text-gray-900">2. Verify the Code</h3>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Enter the 6-digit code from your app
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={twoFactorCode}
+                                            onChange={(e) => setTwoFactorCode(e.target.value)}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                            placeholder="6-digit code"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setTwoFactorStatus('idle');
+                                                setTwoFactorCode('');
+                                                setTwoFactorError('');
+                                                setTwoFactorSuccess('');
+                                            }}
+                                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={twoFactorLoading}
+                                            className="bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 font-medium"
+                                        >
+                                            {twoFactorLoading ? 'Verifying...' : 'Verify and Enable'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Delete Account Section */}

@@ -36,9 +36,9 @@ const apiRequest = async (endpoint, options = {}) => {
 
 // Auth API
 export const authAPI = {
-  login: (email, password) => apiRequest('/auth/login', {
+  login: (email, password, twoFactorToken) => apiRequest('/auth/login', {
     method: 'POST',
-    body: { email, password },
+    body: { email, password, twoFactorToken },
   }),
   register: (name, email, password, role, secretPassword) => apiRequest('/auth/register', {
     method: 'POST',
@@ -51,6 +51,15 @@ export const authAPI = {
   }),
   deleteAccount: () => apiRequest('/auth/me', {
     method: 'DELETE',
+  }),
+  enable2FA: () => apiRequest('/auth/2fa/generate'),
+  verify2FA: (token) => apiRequest('/auth/2fa/verify', {
+    method: 'POST',
+    body: { token },
+  }),
+  disable2FA: (token) => apiRequest('/auth/2fa/disable', {
+    method: 'POST',
+    body: { token },
   }),
 };
 

@@ -3,6 +3,10 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import SystemSetting from '../models/SystemSetting.js';
 import { protect } from '../middleware/auth.js';
+import otplib from 'otplib';
+import qrcode from 'qrcode';
+
+const { authenticator } = otplib;
 
 const router = express.Router();
 
@@ -89,6 +93,18 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email }).select('+password');
 
     if (user && (await user.comparePassword(password))) {
+      if (user.twoFactorEnabled) {
+        const { twoFactorToken } = req.body;
+        if (!twoFactorToken) {
+          return res.json({ requires2FA: true, message: '2FA code required' });
+        }
+        
+        const isValid = authenticator.verify({ token: twoFactorToken, secret: user.twoFactorSecret });
+        if (!isValid) {
+          return res.status(401).json({ message: 'Invalid 2FA code' });
+        }
+      }
+
       res.json({
         _id: user._id,
         name: user.name,
@@ -115,6 +131,7 @@ router.get('/me', protect, async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      twoFactorEnabled: user.twoFactorEnabled || false,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -165,6 +182,77 @@ router.delete('/me', protect, async (req, res) => {
     await User.findByIdAndDelete(req.user._id);
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   GET /api/auth/2fa/generate
+// @desc    Generate 2FA secret
+// @access  Private
+router.get('/2fa/generate', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const secret = authenticator.generateSecret();
+    user.twoFactorSecret = secret;
+    await user.save();
+    
+    const appName = process.env.TWO_FACTOR_APP_NAME || 'SCM Tool';
+    const otpauth = authenticator.keyuri(user.email, appName, secret);
+    const qrImage = await qrcode.toDataURL(otpauth);
+    
+    res.json({ secret, qrImage });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/auth/2fa/verify
+// @desc    Verify and enable 2FA
+// @access  Private
+router.post('/2fa/verify', protect, async (req, res) => {
+  try {
+    const { token } = req.body;
+    const user = await User.findById(req.user._id);
+    
+    if (!user.twoFactorSecret) {
+      return res.status(400).json({ message: '2FA secret not generated' });
+    }
+    
+    const isValid = authenticator.verify({ token, secret: user.twoFactorSecret });
+    if (isValid) {
+      user.twoFactorEnabled = true;
+      await user.save();
+      res.json({ message: '2FA enabled successfully', twoFactorEnabled: true });
+    } else {
+      res.status(400).json({ message: 'Invalid 2FA code' });
+    }
+  } catch(error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/auth/2fa/disable
+// @desc    Disable 2FA
+// @access  Private
+router.post('/2fa/disable', protect, async (req, res) => {
+  try {
+    const { token } = req.body;
+    const user = await User.findById(req.user._id);
+    
+    if (!user.twoFactorEnabled) {
+      return res.status(400).json({ message: '2FA is already disabled' });
+    }
+
+    const isValid = authenticator.verify({ token, secret: user.twoFactorSecret });
+    if (isValid) {
+      user.twoFactorEnabled = false;
+      user.twoFactorSecret = null;
+      await user.save();
+      res.json({ message: '2FA disabled successfully', twoFactorEnabled: false });
+    } else {
+      res.status(400).json({ message: 'Invalid 2FA code' });
+    }
+  } catch(error) {
     res.status(500).json({ message: error.message });
   }
 });

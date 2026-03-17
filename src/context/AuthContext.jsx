@@ -27,7 +27,10 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = async () => {
     try {
       const userData = await authAPI.getMe();
-      setUser(userData);
+      setUser({
+        ...userData,
+        twoFactorEnabled: userData.twoFactorEnabled || false,
+      });
     } catch (error) {
       localStorage.removeItem('token');
       setToken(null);
@@ -37,9 +40,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (email, password, twoFactorToken) => {
     try {
-      const data = await authAPI.login(email, password);
+      const data = await authAPI.login(email, password, twoFactorToken);
+      
+      if (data.requires2FA) {
+        return { success: true, requires2FA: true };
+      }
+
       localStorage.setItem('token', data.token);
       setToken(data.token);
       setUser({
@@ -47,6 +55,7 @@ export const AuthProvider = ({ children }) => {
         name: data.name,
         email: data.email,
         role: data.role,
+        twoFactorEnabled: data.twoFactorEnabled || false,
       });
       return { success: true };
     } catch (error) {
