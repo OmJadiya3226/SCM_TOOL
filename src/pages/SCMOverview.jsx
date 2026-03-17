@@ -9,7 +9,8 @@ import {
     Info,
     ChevronRight,
     ExternalLink,
-    X
+    X,
+    MapPin
 } from 'lucide-react'
 import { suppliersAPI, rawMaterialsAPI, batchesAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
@@ -32,6 +33,7 @@ const SCMOverview = () => {
     const [viewingSupplier, setViewingSupplier] = useState(null)
     const [viewingMaterial, setViewingMaterial] = useState(null)
     const [viewingBatch, setViewingBatch] = useState(null)
+    const [showingMap, setShowingMap] = useState(false)
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -397,6 +399,36 @@ const SCMOverview = () => {
             </div>
 
             {/* View Supplier Modal */}
+            {showingMap && viewingSupplier && (
+                <Modal>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-[110] flex items-center justify-center p-4">
+                        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full h-[80vh] flex flex-col">
+                            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                                <h2 className="text-2xl font-bold text-gray-900">Supplier Location</h2>
+                                <button
+                                    onClick={() => setShowingMap(false)}
+                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5 text-gray-600" />
+                                </button>
+                            </div>
+                            <div className="flex-1 w-full bg-gray-100 p-2 relative">
+                                <iframe
+                                    title="Google Maps"
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: 0, borderRadius: '0.5rem' }}
+                                    loading="lazy"
+                                    allowFullScreen
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    src={`https://maps.google.com/maps?q=${encodeURIComponent([viewingSupplier.address.street, viewingSupplier.address.city, viewingSupplier.address.state, viewingSupplier.address.zipCode, viewingSupplier.address.country].join(', '))}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                                ></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
             {viewingSupplier && (
                 <Modal>
                     <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
@@ -480,7 +512,18 @@ const SCMOverview = () => {
                                 )}
                                 {viewingSupplier.address && (viewingSupplier.address.street || viewingSupplier.address.city) && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Address</label>
+                                        <div className="flex justify-between items-center">
+                                            <label className="block text-sm font-medium text-gray-700">Address</label>
+                                            {viewingSupplier.address.street && viewingSupplier.address.city && viewingSupplier.address.state && viewingSupplier.address.zipCode && viewingSupplier.address.country && (
+                                                <button
+                                                    onClick={() => setShowingMap(true)}
+                                                    className="text-primary-600 hover:text-primary-800 text-sm font-medium flex items-center gap-1"
+                                                >
+                                                    <MapPin className="w-4 h-4" />
+                                                    Show on Map
+                                                </button>
+                                            )}
+                                        </div>
                                         <p className="mt-1 text-gray-900">
                                             {[viewingSupplier.address.street, viewingSupplier.address.city, viewingSupplier.address.state, viewingSupplier.address.zipCode, viewingSupplier.address.country]
                                                 .filter(Boolean)
