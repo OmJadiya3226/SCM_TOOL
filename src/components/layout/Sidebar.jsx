@@ -31,7 +31,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/batches', icon: Layers, label: 'Batches' },
     ...(!isQA ? [
       { type: 'separator' },
-      //{ path: '/scm-search', icon: SearchCode, label: 'SCM Search' },
+      { path: '/scm-search', icon: SearchCode, label: 'SCM Search' },
       { path: '/scm-overview', icon: GitBranch, label: 'SCM Overview' },
     ] : []),
   ]
