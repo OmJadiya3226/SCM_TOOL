@@ -153,6 +153,7 @@ export const dashboardAPI = {
   getRecentBatches: () => apiRequest('/dashboard/recent-batches'),
   getSupplierAlerts: () => apiRequest('/dashboard/supplier-alerts'),
   getChartData: () => apiRequest('/dashboard/chart-data'),
+  dismissAlert: (id) => apiRequest(`/dashboard/alerts/${id}/dismiss`, { method: 'POST' }),
 };
 
 // Settings API

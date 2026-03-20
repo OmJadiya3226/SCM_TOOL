@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Package, Users, Layers, AlertTriangle, LayoutDashboard } from 'lucide-react'
+import { Package, Users, Layers, AlertTriangle, LayoutDashboard, X } from 'lucide-react'
 import { dashboardAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
@@ -109,6 +109,25 @@ const Dashboard = () => {
     }
   }
 
+  const handleDismissAlert = async (id) => {
+    try {
+      if (!id) return;
+      await dashboardAPI.dismissAlert(id);
+      
+      // Update local alerts array immediately
+      setSupplierAlerts(prev => prev.filter(alert => alert.id !== id));
+      
+      // Also decrement the top stats
+      setStats(prevStats => prevStats.map(stat => 
+        stat.title === 'Important Alerts' 
+          ? { ...stat, value: Math.max(0, parseInt(stat.value) - 1).toString() } 
+          : stat
+      ));
+    } catch (error) {
+      console.error('Failed to dismiss alert:', error);
+    }
+  };
+
   // Don't render if not admin
   if (!user || user.role !== 'admin') {
     return (
@@ -191,13 +210,22 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-4">
               {supplierAlerts.map((alert, index) => (
-                <div key={index} className="flex items-start space-x-3 py-3 border-b border-gray-100 last:border-0">
+                <div key={alert.id || index} className="flex items-start space-x-3 py-3 border-b border-gray-100 last:border-0 group relative pr-6">
                   <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${alert.severity === 'high' ? 'bg-red-500' : 'bg-yellow-500'
                     }`}></div>
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">{alert.type}</p>
                     <p className="text-sm text-gray-500">{alert.message}</p>
                   </div>
+                  {alert.id && (
+                    <button
+                      onClick={() => handleDismissAlert(alert.id)}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-red-500 flex-shrink-0"
+                      title="Dismiss alert"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
