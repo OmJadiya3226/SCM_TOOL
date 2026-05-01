@@ -20,7 +20,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   const menuItems = [
     ...(isAdmin ? [
       { path: '/', icon: LayoutDashboard, label: 'Admin Overview' },
-      { path: '/analytics', icon: BarChart, label: 'Analytics' },
+      { path: '/analytics', icon: BarChart, label: 'Visual Analytics' },
       { path: '/employees', icon: Users, label: 'Employees' },
       { type: 'separator' }
     ] : []),
