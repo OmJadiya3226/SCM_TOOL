@@ -54,7 +54,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         {/* Logo Section */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           {isOpen && (
-            <h1 className="text-xl font-bold text-primary-600">SCM System</h1>
+            <h1 className="text-xl font-bold text-primary-600">SupplyChainer</h1>
           )}
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -102,7 +102,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         {isOpen && (
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
             <p className="text-xs text-gray-500 text-center">
-              SCM System v1.0
+              SupplyChainer v1.0
             </p>
           </div>
         )}
