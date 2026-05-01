@@ -44,6 +44,7 @@ const DashboardCharts = ({ data }) => {
             {
                 label: 'Suppliers',
                 data: supplierStatus.map(s => s.count),
+                items: supplierStatus.map(s => s.items),
                 backgroundColor: supplierStatus.map(s => supplierStatusMap[s._id] || 'rgba(107, 114, 128, 0.85)'),
                 borderColor: supplierStatus.map(s => supplierStatusBorderMap[s._id] || 'rgb(75, 85, 99)'),
                 borderWidth: 0,
@@ -70,6 +71,7 @@ const DashboardCharts = ({ data }) => {
             {
                 label: 'Materials',
                 data: materialStatus.map(m => m.count),
+                items: materialStatus.map(m => m.items),
                 backgroundColor: materialStatus.map(m => materialStatusMap[m._id] || 'rgba(107, 114, 128, 0.85)'),
                 borderColor: materialStatus.map(m => materialStatusBorderMap[m._id] || 'rgb(75, 85, 99)'),
                 borderWidth: 0,
@@ -96,6 +98,7 @@ const DashboardCharts = ({ data }) => {
             {
                 label: 'Batches',
                 data: batchApproval.map(b => b.count),
+                items: batchApproval.map(b => b.items),
                 backgroundColor: batchApproval.map(b => batchApprovalMap[b._id] || 'rgba(107, 114, 128, 0.85)'),
                 borderColor: batchApproval.map(b => batchApprovalBorderMap[b._id] || 'rgb(75, 85, 99)'),
                 borderWidth: 0,
@@ -112,6 +115,7 @@ const DashboardCharts = ({ data }) => {
             {
                 label: 'Quality Issues',
                 data: supplierQuality.map(s => s.issueCount),
+                items: supplierQuality.map(s => s.items),
                 backgroundColor: 'rgba(167, 139, 250, 0.9)', // Deeper Violet
                 borderColor: 'rgb(139, 92, 246)',
                 borderWidth: 0,
@@ -128,6 +132,7 @@ const DashboardCharts = ({ data }) => {
             {
                 label: 'Quantity',
                 data: stockLevels.map(m => m.quantity),
+                suppliers: stockLevels.map(m => m.supplier),
                 backgroundColor: 'rgba(56, 189, 248, 0.9)', // Deeper Sky Blue
                 borderColor: 'rgb(14, 165, 233)',
                 borderWidth: 0,
@@ -140,9 +145,74 @@ const DashboardCharts = ({ data }) => {
     const commonOptions = {
         responsive: true,
         maintainAspectRatio: false,
-        animation: false,
-        events: [],
         plugins: {
+            tooltip: {
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                titleColor: '#1F2937',
+                bodyColor: '#4B5563',
+                borderColor: '#E5E7EB',
+                borderWidth: 1,
+                padding: 12,
+                boxPadding: 6,
+                usePointStyle: true,
+                titleFont: {
+                    family: "'Inter', sans-serif",
+                    size: 14,
+                    weight: 'bold'
+                },
+                bodyFont: {
+                    family: "'Inter', sans-serif",
+                    size: 13
+                },
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        let value;
+                        if (typeof context.parsed === 'number') {
+                            value = context.parsed;
+                        } else {
+                            // Handle both vertical (y) and horizontal (x) bar charts
+                            value = context.parsed.y !== undefined ? context.parsed.y : context.parsed.x;
+                        }
+                        label += value;
+                        return label;
+                    },
+                    footer: function(tooltipItems) {
+                        const context = tooltipItems[0];
+                        const dataset = context.dataset;
+                        const index = context.dataIndex;
+                        
+                        if (dataset.items) {
+                            const items = dataset.items[index];
+                            if (items && items.length > 0) {
+                                const displayItems = items.slice(0, 10); // Increased limit slightly for vertical list
+                                const lines = ['Details:'];
+                                displayItems.forEach(item => lines.push(`• ${item}`));
+                                if (items.length > 10) {
+                                    lines.push(`...and ${items.length - 10} more`);
+                                }
+                                return lines;
+                            }
+                        }
+                        
+                        if (dataset.suppliers) {
+                            return [`Supplier:`, `• ${dataset.suppliers[index]}`];
+                        }
+                        
+                        return '';
+                    }
+                },
+                footerFont: {
+                    family: "'Inter', sans-serif",
+                    size: 12,
+                    weight: 'normal'
+                },
+                footerColor: '#6B7280',
+                footerMarginTop: 8,
+            },
             legend: {
                 position: 'bottom',
                 labels: {
@@ -253,11 +323,29 @@ const DashboardCharts = ({ data }) => {
                         options={{
                             ...commonOptions,
                             indexAxis: 'x',
+                            plugins: {
+                                ...commonOptions.plugins,
+                                tooltip: {
+                                    ...commonOptions.plugins.tooltip,
+                                    callbacks: {
+                                        ...commonOptions.plugins.tooltip.callbacks,
+                                        label: function(context) {
+                                            return ` Stock Quantity: ${context.parsed.y} kg`;
+                                        }
+                                    }
+                                }
+                            },
                             scales: {
                                 x: barScales.x,
                                 y: {
                                     ...barScales.y,
-                                    beginAtZero: true
+                                    beginAtZero: true,
+                                    ticks: {
+                                        ...barScales.y.ticks,
+                                        callback: function(value) {
+                                            return value + ' kg';
+                                        }
+                                    }
                                 }
                             }
                         }}

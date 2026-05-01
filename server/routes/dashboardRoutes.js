@@ -165,31 +165,32 @@ router.post('/alerts/:id/dismiss', protect, admin, async (req, res) => {
 router.get('/chart-data', protect, admin, async (req, res) => {
   try {
     const supplierStatuses = await Supplier.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } }
+      { $group: { _id: '$status', count: { $sum: 1 }, items: { $push: '$name' } } }
     ]);
 
     const materialStatuses = await RawMaterial.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } }
+      { $group: { _id: '$status', count: { $sum: 1 }, items: { $push: '$name' } } }
     ]);
 
     const batchApprovals = await Batch.aggregate([
-      { $group: { _id: '$approvalStatus', count: { $sum: 1 } } }
+      { $group: { _id: '$approvalStatus', count: { $sum: 1 }, items: { $push: '$batchNumber' } } }
     ]);
 
     const suppliers = await Supplier.find({});
     const supplierQualityIssues = suppliers
       .map(s => ({
         name: s.name,
-        issueCount: Array.isArray(s.qualityIssues) ? s.qualityIssues.length : 0
+        issueCount: Array.isArray(s.qualityIssues) ? s.qualityIssues.length : (typeof s.qualityIssues === 'number' ? s.qualityIssues : 0),
+        items: Array.isArray(s.qualityIssues) ? s.qualityIssues.map(i => i.description || i) : []
       }))
       .filter(s => s.issueCount > 0)
       .sort((a, b) => b.issueCount - a.issueCount)
       .slice(0, 5);
 
     const stockLevels = await RawMaterial.find({})
+      .populate('supplier', 'name')
       .sort({ 'quantity.value': -1 })
-      .limit(5)
-      .select('name quantity');
+      .limit(5);
 
     res.json({
       supplierStatus: supplierStatuses,
@@ -199,7 +200,8 @@ router.get('/chart-data', protect, admin, async (req, res) => {
       stockLevels: stockLevels.map(m => ({
         name: m.name,
         quantity: m.quantity.value,
-        unit: m.quantity.unit
+        unit: m.quantity.unit,
+        supplier: m.supplier?.name || 'N/A'
       }))
     });
   } catch (error) {
